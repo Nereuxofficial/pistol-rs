@@ -50,6 +50,12 @@ pub struct OSDetects {
     pub etime: DateTime<Local>,
 }
 
+impl Default for OSDetects {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OSDetects {
     pub fn new() -> OSDetects {
         OSDetects {
@@ -85,7 +91,7 @@ impl fmt::Display for OSDetects {
             row![c -> "id", c -> "addr", c -> "rank", c -> "score", c -> "details", c -> "cpe"],
         );
         let oss = &self.oss;
-        let oss: BTreeMap<IpAddr, &HostOSDetects> = oss.into_iter().map(|(i, h)| (*i, h)).collect();
+        let oss: BTreeMap<IpAddr, &HostOSDetects> = oss.iter().map(|(i, h)| (*i, h)).collect();
         let mut id = 1;
         for (ip, o) in oss {
             match o {
@@ -320,7 +326,7 @@ fn get_nmap_os_db() -> Result<Vec<NmapOSDB>, PistolErrors> {
     let reader = Cursor::new(data);
     let mut archive = ZipArchive::new(reader)?;
 
-    if archive.len() > 0 {
+    if !archive.is_empty() {
         let mut file = archive.by_index(0)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -343,8 +349,8 @@ pub fn os_detect(
         Some(t) => t,
         None => {
             let threads_num = target.hosts.len();
-            let threads_num = threads_num_check(threads_num);
-            threads_num
+            
+            threads_num_check(threads_num)
         }
     };
 
@@ -378,7 +384,8 @@ pub fn os_detect(
                         let dst_open_tcp_port = dst_ports[0];
                         let dst_closed_tcp_port = dst_ports[1];
                         let dst_closed_udp_port = dst_ports[2];
-                        let os_detect_ret = threads_os_probe(
+                        
+                        threads_os_probe(
                             src_ipv4,
                             dst_ipv4,
                             dst_open_tcp_port,
@@ -387,8 +394,7 @@ pub fn os_detect(
                             nmap_os_db,
                             top_k,
                             timeout,
-                        );
-                        os_detect_ret
+                        )
                     } else {
                         Err(PistolErrors::OSDetectPortsNotEnough)
                     };
@@ -399,9 +405,8 @@ pub fn os_detect(
                         }
                         Err(e) => Err(e),
                     };
-                    match tx.send((dst_addr, hodr)) {
-                        _ => (),
-                    }
+                    // TODO: Handle error
+                    let _ = tx.send((dst_addr, hodr));                
                 });
             }
             IpAddr::V6(dst_ipv6) => {
@@ -421,7 +426,8 @@ pub fn os_detect(
                         let dst_closed_tcp_port = dst_ports[1];
                         let dst_closed_udp_port = dst_ports[2];
 
-                        let os_detect_ret = threads_os_probe6(
+                        
+                        threads_os_probe6(
                             src_ipv6,
                             dst_ipv6,
                             dst_open_tcp_port,
@@ -430,8 +436,7 @@ pub fn os_detect(
                             top_k,
                             linear,
                             timeout,
-                        );
-                        os_detect_ret
+                        )
                     } else {
                         Err(PistolErrors::OSDetectPortsNotEnough)
                     };
@@ -601,11 +606,8 @@ mod tests {
         println!("{}", ret);
 
         let rr = ret.get(&TEST_IPV4_LOCAL.into()).unwrap();
-        match rr {
-            HostOSDetects::V4(r) => {
-                println!("{}", r.fingerprint);
-            }
-            _ => (),
+        if let HostOSDetects::V4(r) = rr {
+            println!("{}", r.fingerprint);
         }
     }
     #[test]
@@ -686,8 +688,8 @@ mod tests {
         let nmap_fingerprint_format = |input: &str| -> String {
             let output = input.replace("OS:", "");
             let output = output.replace("\n", "");
-            let output = output.replace(")", ")\n");
-            output
+            
+            output.replace(")", ")\n")
         };
 
         let nmap_output = "
@@ -702,7 +704,7 @@ OS:%S=A%A=Z%F=R%O=%RD=0%Q=)T7(R=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)U1
 OS:(R=Y%DF=N%T=40%IPL=164%UN=0%RIPL=G%RID=G%RIPCK=G%RUCK=G%RUD=G)IE(R=Y%DFI
 OS:=N%T=40%CD=S)";
 
-        let p = nmap_fingerprint_format(&nmap_output);
+        let p = nmap_fingerprint_format(nmap_output);
         println!("{}", p);
     }
 }

@@ -72,7 +72,7 @@ pub fn send_icmp_ping_packet(
     let checksum = icmp::checksum(&icmp_header.to_immutable());
     icmp_header.set_checksum(checksum);
 
-    let codes_1 = vec![
+    let codes_1 = [
         destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
         destination_unreachable::IcmpCodes::DestinationHostUnreachable,     // 1
         destination_unreachable::IcmpCodes::DestinationPortUnreachable,     // 3
@@ -94,36 +94,25 @@ pub fn send_icmp_ping_packet(
     let layers_match = LayersMatch::Layer4MatchIcmp(layer4_icmp);
 
     let (ret, rtt) = layer3_ipv4_send(src_ipv4, dst_ipv4, &ip_buff, vec![layers_match], timeout)?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        if ipv4_packet.get_next_level_protocol() == IpNextHeaderProtocols::Icmp {
+            if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                let icmp_type = icmp_packet.get_icmp_type();
+                let icmp_code = icmp_packet.get_icmp_code();
 
-                            let codes_2 = vec![
-                                echo_reply::IcmpCodes::NoCode, // 0
-                            ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable {
-                                if codes_1.contains(&icmp_code) {
-                                    // icmp protocol unreachable error (type 3, code 2)
-                                    return Ok((PingStatus::Down, rtt));
-                                }
-                            } else if icmp_type == IcmpTypes::EchoReply {
-                                if codes_2.contains(&icmp_code) {
-                                    return Ok((PingStatus::Up, rtt));
-                                }
-                            }
-                        }
-                        None => (),
+                let codes_2 = vec![
+                    echo_reply::IcmpCodes::NoCode, // 0
+                ];
+                if icmp_type == IcmpTypes::DestinationUnreachable {
+                    if codes_1.contains(&icmp_code) {
+                        // icmp protocol unreachable error (type 3, code 2)
+                        return Ok((PingStatus::Down, rtt));
                     }
+                } else if icmp_type == IcmpTypes::EchoReply && codes_2.contains(&icmp_code) {
+                    return Ok((PingStatus::Up, rtt));
                 }
-                _ => (),
             }
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PingStatus::Down, rtt))

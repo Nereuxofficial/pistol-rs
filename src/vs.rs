@@ -36,6 +36,12 @@ pub struct PortServices {
     pub etime: DateTime<Local>,
 }
 
+impl Default for PortServices {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PortServices {
     pub fn new() -> PortServices {
         PortServices {
@@ -54,6 +60,12 @@ pub struct VsScans {
     pub avg_cost: f64,
     pub stime: DateTime<Local>,
     pub etime: DateTime<Local>,
+}
+
+impl Default for VsScans {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl VsScans {
@@ -76,7 +88,7 @@ impl VsScans {
             .signed_duration_since(self.stime)
             .num_milliseconds();
         let mut total_num = 0;
-        for (_, h) in &self.vss {
+        for h in self.vss.values() {
             total_num += h.len();
         }
         self.avg_cost = self.total_cost as f64 / total_num as f64;
@@ -94,11 +106,11 @@ impl fmt::Display for VsScans {
             .add_row(row![c -> "id", c -> "addr", c -> "port", c -> "service", c -> "versioninfo"]);
         let vss = &self.vss;
         let vss: BTreeMap<IpAddr, &HashMap<u16, PortServices>> =
-            vss.into_iter().map(|(i, h)| (*i, h)).collect();
+            vss.iter().map(|(i, h)| (*i, h)).collect();
         let mut i = 1;
         for (ip, ports_service) in vss {
             let ports_service: BTreeMap<u16, &PortServices> =
-                ports_service.into_iter().map(|(p, s)| (*p, s)).collect();
+                ports_service.iter().map(|(p, s)| (*p, s)).collect();
             for (port, services) in ports_service {
                 let mut sv = Vec::new();
                 let mut vv = Vec::new();
@@ -107,16 +119,16 @@ impl fmt::Display for VsScans {
                         MatchX::Match(m) => (&m.service, &m.versioninfo.to_string()),
                         MatchX::SoftMatch(sm) => (&sm.service, &String::new()),
                     };
-                    if !sv.contains(service) && service.trim().len() > 0 {
+                    if !sv.contains(service) && !service.trim().is_empty() {
                         sv.push(service.trim().to_string());
                     }
-                    if !vv.contains(version) && version.trim().len() > 0 {
+                    if !vv.contains(version) && !version.trim().is_empty() {
                         vv.push(version.trim().to_string());
                     }
                 }
                 let mut services_str = sv.join("|");
                 let versioninfo_str = vv.join("|");
-                if services_str.trim().len() == 0 {
+                if services_str.trim().is_empty() {
                     services_str = String::from("unknown|closed");
                 }
                 table.add_row(
@@ -139,7 +151,7 @@ fn get_nmap_service_probes() -> Result<Vec<ServiceProbe>, PistolErrors> {
     let reader = Cursor::new(data);
     let mut archive = ZipArchive::new(reader)?;
 
-    if archive.len() > 0 {
+    if !archive.is_empty() {
         let mut file = archive.by_index(0)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -168,8 +180,8 @@ pub fn vs_scan(
             for h in &target.hosts {
                 threads_num += h.ports.len();
             }
-            let threads_num = threads_num_check(threads_num);
-            threads_num
+            
+            threads_num_check(threads_num)
         }
     };
 
@@ -344,30 +356,27 @@ mod tests {
         let recv_str = r"S\xf5\xc6\x1a{123456}";
         let regex = FancyRegex::new(r"^S\\xf5\\xc6\\x1a{").unwrap();
         let b = regex.is_match(recv_str).unwrap();
-        assert_eq!(b, true);
+        assert!(b);
 
         let recv_str = r"\x2a";
         let regex = FancyRegex::new(r"(\\x2a|\\x2b)").unwrap();
         let b = regex.is_match(recv_str).unwrap();
-        assert_eq!(b, true);
+        assert!(b);
 
         let recv_str = r"\x2d";
         let regex = FancyRegex::new(r"(\\x2a|\\x2b)").unwrap();
         let b = regex.is_match(recv_str).unwrap();
-        assert_eq!(b, false);
+        assert!(!b);
 
         let test_strs = vec![r"S\xf5\xc6\x1a{123456}"];
 
         let service_probes = get_nmap_service_probes().unwrap();
         for s in service_probes {
             for t in &test_strs {
-                match s.check(t) {
-                    Some(mx) => match mx {
-                        MatchX::Match(m) => println!("{}", m.service),
-                        MatchX::SoftMatch(m) => println!("{}", m.service),
-                    },
-                    None => (),
-                }
+                if let Some(mx) = s.check(t) { match mx {
+                    MatchX::Match(m) => println!("{}", m.service),
+                    MatchX::SoftMatch(m) => println!("{}", m.service),
+                } }
             }
         }
     }
@@ -388,10 +397,10 @@ mod tests {
 
         let regex = FancyRegex::new(r"^HTTP/1\.[01] \d\d\d (?:[^\\r\\n]*\\r\\n(?!\\r\\n))*?Server: Apache[/ ](\d[-.\w]+) ([^\\r\\n]+)").unwrap();
         let test_string = r"HTTP/1.1 200 OK\r\nDate: Tue, 07 Jan 2025 07:07:16 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
         let test_string = r"HTTP/1.1 200 OK\r\nDate: Wed, 18 Dec 2024 03:54:01 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
 
         // let nsp = get_nmap_service_probes().unwrap();
@@ -406,33 +415,33 @@ mod tests {
     fn test_fancy_regex() {
         let regex = FancyRegex::new(r"^HTTP/1\.[01] \d\d\d (?:[^\\r\\n]*\\r\\n(?!\\r\\n))*?Server: Apache[/ ](\d[-.\w]+) ([^\\r\\n]+)").unwrap();
         let test_string = r"HTTP/1.1 200 OK\r\nDate: Tue, 07 Jan 2025 07:07:16 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
         let test_string = r"HTTP/1.1 200 OK\r\nDate: Wed, 18 Dec 2024 03:54:01 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
 
         let regex =
             FancyRegex::new(r"^HTTP/1\.[01] \d\d\d .*Server: Apache[/ ](\d[-.\w]+) ([^\\r\\n]+)")
                 .unwrap();
         let test_string = r"HTTP/1.1 200 OK\r\nDate: Tue, 07 Jan 2025 07:07:16 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
         let test_string = r"HTTP/1.1 200 OK\r\nDate: Wed, 18 Dec 2024 03:54:01 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
     }
     #[test]
     fn test_fancy_regex_github_issues_149() {
         let regex = FancyRegex::new(r"^HTTP/1\.[01] \d\d\d (?:[^\r\n]*\r\n(?!\r\n))*?Server: Apache[/ ](\d[-.\w]+) ([^\r\n]+)").unwrap();
         let test_string = "HTTP/1.1 200 OK\r\nDate: Tue, 07 Jan 2025 07:07:16 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
         let test_string = "HTTP/1.1 200 OK\r\nDate: Wed, 18 Dec 2024 03:54:01 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
         let test_string = "HTTP/1.1 200 OK\r\nDate: Wed, 08 Jan 2025 01:50:56 GMT\r\nServer: Apache/2.4.62 (Debian)\r\nLast-Modified: Fri, 07 Jun 2024 03:51:06 GMTETag";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
 
         let regex = FancyRegex::new(
@@ -440,10 +449,15 @@ mod tests {
         )
         .unwrap();
         let test_string = "HTTP/1.1 200 OK\r\nDate: Tue, 07 Jan 2025 07:07:16 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
         let test_string = "HTTP/1.1 200 OK\r\nDate: Wed, 18 Dec 2024 03:54:01 GMT\r\nServer: Apache/2.4.62 (Debian)\r\n";
-        let ret = regex.is_match(&test_string).unwrap();
+        let ret = regex.is_match(test_string).unwrap();
         println!("{}", ret);
+    }
+    
+    #[test]
+    fn test_get_nmap_service_probes(){
+        get_nmap_service_probes().unwrap();
     }
 }

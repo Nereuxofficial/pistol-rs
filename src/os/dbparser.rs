@@ -18,10 +18,7 @@ use crate::utils::SpHex;
 fn bool_score(bool_vec: Vec<bool>) -> usize {
     let mut score = 0;
     for i in bool_vec {
-        match i {
-            true => score += 1,
-            _ => (),
-        }
+        if i { score += 1 }
     }
     score
 }
@@ -75,6 +72,12 @@ impl NmapString {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NmapEmpty {}
 
+impl Default for NmapEmpty {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NmapEmpty {
     pub fn new() -> NmapEmpty {
         NmapEmpty {}
@@ -106,7 +109,7 @@ pub enum NmapData {
 impl NmapData {
     pub fn parser_usize(input: &str) -> Result<NmapData, PistolErrors> {
         let input = input.trim();
-        if input.len() == 0 {
+        if input.is_empty() {
             Ok(NmapData::empty())
         } else {
             let mut range_values = Vec::new();
@@ -120,64 +123,55 @@ impl NmapData {
 
             for it in items {
                 if range_reg.is_match(it) {
-                    match range_reg.captures(it) {
-                        Some(caps) => {
-                            let start = caps.name("start").map_or("", |m| m.as_str());
-                            let end = caps.name("end").map_or("", |m| m.as_str());
-                            let start: usize = match start.parse() {
-                                Ok(s) => s,
-                                Err(_) => {
-                                    let he = SpHex::new_hex(start);
-                                    let e_u32 = he.decode()?;
-                                    e_u32 as usize
-                                }
-                            };
-                            let end: usize = match end.parse() {
-                                Ok(e) => e,
-                                Err(_) => {
-                                    let he = SpHex::new_hex(end);
-                                    let e_u32 = he.decode()?;
-                                    e_u32 as usize
-                                }
-                            };
-                            let range = NmapRangeValue::new(start, end, NmapRangeTypes::Both);
-                            range_values.push(range);
-                        }
-                        None => (),
+                    if let Some(caps) = range_reg.captures(it) {
+                        let start = caps.name("start").map_or("", |m| m.as_str());
+                        let end = caps.name("end").map_or("", |m| m.as_str());
+                        let start: usize = match start.parse() {
+                            Ok(s) => s,
+                            Err(_) => {
+                                let he = SpHex::new_hex(start);
+                                let e_u32 = he.decode()?;
+                                e_u32 as usize
+                            }
+                        };
+                        let end: usize = match end.parse() {
+                            Ok(e) => e,
+                            Err(_) => {
+                                let he = SpHex::new_hex(end);
+                                let e_u32 = he.decode()?;
+                                e_u32 as usize
+                            }
+                        };
+                        let range = NmapRangeValue::new(start, end, NmapRangeTypes::Both);
+                        range_values.push(range);
                     }
                 } else if great_reg.is_match(it) {
-                    match great_reg.captures(it) {
-                        Some(caps) => {
-                            let start = caps.name("start").map_or("", |m| m.as_str());
-                            let start: usize = match start.parse() {
-                                Ok(s) => s,
-                                Err(_) => {
-                                    let he = SpHex::new_hex(start);
-                                    let e_u32 = he.decode()?;
-                                    e_u32 as usize
-                                }
-                            };
-                            let range = NmapRangeValue::new(start, 0, NmapRangeTypes::Left);
-                            range_values.push(range);
-                        }
-                        None => (),
+                    if let Some(caps) = great_reg.captures(it) {
+                        let start = caps.name("start").map_or("", |m| m.as_str());
+                        let start: usize = match start.parse() {
+                            Ok(s) => s,
+                            Err(_) => {
+                                let he = SpHex::new_hex(start);
+                                let e_u32 = he.decode()?;
+                                e_u32 as usize
+                            }
+                        };
+                        let range = NmapRangeValue::new(start, 0, NmapRangeTypes::Left);
+                        range_values.push(range);
                     }
                 } else if less_reg.is_match(it) {
-                    match less_reg.captures(it) {
-                        Some(caps) => {
-                            let end = caps.name("end").map_or("", |m| m.as_str());
-                            let end: usize = match end.parse() {
-                                Ok(e) => e,
-                                Err(_) => {
-                                    let he = SpHex::new_hex(end);
-                                    let e_u32 = he.decode()?;
-                                    e_u32 as usize
-                                }
-                            };
-                            let range = NmapRangeValue::new(end, 0, NmapRangeTypes::Right);
-                            range_values.push(range);
-                        }
-                        None => (),
+                    if let Some(caps) = less_reg.captures(it) {
+                        let end = caps.name("end").map_or("", |m| m.as_str());
+                        let end: usize = match end.parse() {
+                            Ok(e) => e,
+                            Err(_) => {
+                                let he = SpHex::new_hex(end);
+                                let e_u32 = he.decode()?;
+                                e_u32 as usize
+                            }
+                        };
+                        let range = NmapRangeValue::new(end, 0, NmapRangeTypes::Right);
+                        range_values.push(range);
                     }
                 } else {
                     let he = SpHex::new_hex(it);
@@ -192,7 +186,7 @@ impl NmapData {
     }
     pub fn parser_str(input: &str) -> NmapData {
         let input = input.trim();
-        if input.len() == 0 {
+        if input.is_empty() {
             NmapData::empty()
         } else {
             let value = input.to_string();
@@ -203,12 +197,10 @@ impl NmapData {
                     ret.push(s.to_string());
                 }
                 NmapData::NmapString(NmapString::new(ret))
+            } else if !value.is_empty() {
+                NmapData::NmapString(NmapString::new(vec![value]))
             } else {
-                if value.len() > 0 {
-                    NmapData::NmapString(NmapString::new(vec![value]))
-                } else {
-                    NmapData::empty()
-                }
+                NmapData::empty()
             }
         }
     }
@@ -547,7 +539,7 @@ impl U1DB {
                     } else {
                         self.tg.check_usize(u1x.tg as usize)
                     };
-                    let ipl_check = self.ipl.check_usize(u1x.ipl as usize);
+                    let ipl_check = self.ipl.check_usize(u1x.ipl);
                     let un_check = self.un.check_usize(u1x.un as usize);
                     let ripl_check = self.ripl.check_string(&u1x.ripl);
                     let rid_check = self.rid.check_string(&u1x.rid);
@@ -741,7 +733,7 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
         match iter.next() {
             Some(line) => {
                 let _ = pb.update(1);
-                if line.starts_with("#") || line.trim().len() == 0 {
+                if line.starts_with("#") || line.trim().is_empty() {
                     continue;
                 }
                 if line.starts_with("Fingerprint") {
@@ -774,7 +766,7 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 let class4 = class4.trim().to_string();
                                 let mut class = Vec::new();
                                 let mut class_push = |input: String| {
-                                    if input.len() > 0 {
+                                    if !input.is_empty() {
                                         class.push(input);
                                     }
                                 };
@@ -798,7 +790,7 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 Ok(cpe.to_string())
                             }
                             None => {
-                                return Err(PistolErrors::OSDBParseError {
+                                Err(PistolErrors::OSDBParseError {
                                     name: String::from("CPE"),
                                     line,
                                 })
@@ -843,7 +835,7 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 Ok(seq)
                             }
                             None => {
-                                return Err(PistolErrors::OSDBParseError {
+                                Err(PistolErrors::OSDBParseError {
                                     name: String::from("SEQ"),
                                     line,
                                 })
@@ -882,7 +874,7 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 Ok(ops)
                             }
                             None => {
-                                return Err(PistolErrors::OSDBParseError {
+                                Err(PistolErrors::OSDBParseError {
                                     name: String::from("OPS"),
                                     line,
                                 })
@@ -921,7 +913,7 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 Ok(win)
                             }
                             None => {
-                                return Err(PistolErrors::OSDBParseError {
+                                Err(PistolErrors::OSDBParseError {
                                     name: String::from("WIN"),
                                     line,
                                 })
@@ -963,7 +955,7 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 Ok(ecn)
                             }
                             None => {
-                                return Err(PistolErrors::OSDBParseError {
+                                Err(PistolErrors::OSDBParseError {
                                     name: String::from("ECN"),
                                     line,
                                 })
@@ -1014,8 +1006,8 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 Ok(txdb)
                             }
                             None => {
-                                return Err(PistolErrors::OSDBParseError {
-                                    name: format!("TX"),
+                                Err(PistolErrors::OSDBParseError {
+                                    name: "TX".to_string(),
                                     line,
                                 })
                             }
@@ -1065,8 +1057,8 @@ pub fn nmap_os_db_parser(lines: Vec<String>) -> Result<Vec<NmapOSDB>, PistolErro
                                 Ok(u1)
                             }
                             None => {
-                                return Err(PistolErrors::OSDBParseError {
-                                    name: format!("U1"),
+                                Err(PistolErrors::OSDBParseError {
+                                    name: "U1".to_string(),
                                     line,
                                 })
                             }

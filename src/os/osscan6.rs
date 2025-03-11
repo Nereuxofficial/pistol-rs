@@ -130,8 +130,8 @@ fn p_as_nmap_format(input: &[u8]) -> String {
         }
     }
 
-    let new_p = p_reduce(&p);
-    new_p
+    
+    p_reduce(&p)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,7 +155,7 @@ impl SEQX6 {
 
 impl fmt::Display for SEQX6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output = if self.rr.response.len() > 0 {
+        let output = if !self.rr.response.is_empty() {
             let output = format!(
                 "{}(P={}%ST={:.6}%RT={:.6})",
                 self.name,
@@ -192,7 +192,7 @@ impl IEX6 {
 
 impl fmt::Display for IEX6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output = if self.rr.response.len() > 0 {
+        let output = if !self.rr.response.is_empty() {
             let output = format!(
                 "{}(P={}%ST={:.6}%RT={:.6})",
                 self.name,
@@ -229,7 +229,7 @@ impl NX6 {
 
 impl fmt::Display for NX6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output = if self.rr.response.len() > 0 {
+        let output = if !self.rr.response.is_empty() {
             let output = format!(
                 "{}(P={}%ST={:.6}%RT={:.6})",
                 self.name,
@@ -264,7 +264,7 @@ impl U1X6 {
 
 impl fmt::Display for U1X6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output = if self.rr.response.len() > 0 {
+        let output = if !self.rr.response.is_empty() {
             let output = format!(
                 "U1(P={}%ST={:.6}%RT={:.6})",
                 p_as_nmap_format(&self.rr.response),
@@ -298,7 +298,7 @@ impl TECNX6 {
 
 impl fmt::Display for TECNX6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output = if self.rr.response.len() > 0 {
+        let output = if !self.rr.response.is_empty() {
             let output = format!(
                 "TECN(P={}%ST={:.6}%RT={:.6})",
                 p_as_nmap_format(&self.rr.response),
@@ -334,7 +334,7 @@ impl TX6 {
 
 impl fmt::Display for TX6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output = if self.rr.response.len() > 0 {
+        let output = if !self.rr.response.is_empty() {
             let output = format!(
                 "{}(P={}%ST={:.6}%RT={:.6})",
                 self.name,
@@ -427,7 +427,7 @@ impl TargetFingerprint6 {
 
 impl fmt::Display for TargetFingerprint6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut output = format!("{}", self.scan);
+        let mut output = self.scan.to_string();
         let s1x_str = format!("\n{}", self.s1x);
         let s2x_str = format!("\n{}", self.s2x);
         let s3x_str = format!("\n{}", self.s3x);
@@ -443,49 +443,49 @@ impl fmt::Display for TargetFingerprint6 {
         let t6x_str = format!("\n{}", self.t6x);
         let t7x_str = format!("\n{}", self.t7x);
         let extra_str = format!("\nEXTRA(FL={})", self.extra);
-        if s1x_str.trim().len() > 0 {
+        if !s1x_str.trim().is_empty() {
             output += &s1x_str;
         }
-        if s2x_str.trim().len() > 0 {
+        if !s2x_str.trim().is_empty() {
             output += &s2x_str;
         }
-        if s3x_str.trim().len() > 0 {
+        if !s3x_str.trim().is_empty() {
             output += &s3x_str;
         }
-        if s4x_str.trim().len() > 0 {
+        if !s4x_str.trim().is_empty() {
             output += &s4x_str;
         }
-        if s5x_str.trim().len() > 0 {
+        if !s5x_str.trim().is_empty() {
             output += &s5x_str;
         }
-        if s6x_str.trim().len() > 0 {
+        if !s6x_str.trim().is_empty() {
             output += &s6x_str;
         }
-        if u1x_str.trim().len() > 0 {
+        if !u1x_str.trim().is_empty() {
             output += &u1x_str;
         }
-        if tecnx_str.trim().len() > 0 {
+        if !tecnx_str.trim().is_empty() {
             output += &tecnx_str;
         }
-        if t2x_str.trim().len() > 0 {
+        if !t2x_str.trim().is_empty() {
             output += &t2x_str;
         }
-        if t3x_str.trim().len() > 0 {
+        if !t3x_str.trim().is_empty() {
             output += &t3x_str;
         }
-        if t4x_str.trim().len() > 0 {
+        if !t4x_str.trim().is_empty() {
             output += &t4x_str;
         }
-        if t5x_str.trim().len() > 0 {
+        if !t5x_str.trim().is_empty() {
             output += &t5x_str;
         }
-        if t6x_str.trim().len() > 0 {
+        if !t6x_str.trim().is_empty() {
             output += &t6x_str;
         }
-        if t7x_str.trim().len() > 0 {
+        if !t7x_str.trim().is_empty() {
             output += &t7x_str;
         }
-        if extra_str.trim().len() > 0 {
+        if !extra_str.trim().is_empty() {
             output += &extra_str;
         }
         write!(f, "{}", output)
@@ -538,7 +538,7 @@ fn send_seq_probes(
                 let rt = start_time.elapsed();
                 match ret {
                     Ok((response, rtt)) => {
-                        if response.len() > 0 {
+                        if !response.is_empty() {
                             match tx.send((i, buff.to_vec(), Ok((response, rtt)), st, rt)) {
                                 _ => (),
                             };
@@ -670,7 +670,7 @@ fn send_ie_probes(
             let rt = start_time.elapsed();
             match ret {
                 Ok((response, rtt)) => {
-                    if response.len() > 0 {
+                    if !response.is_empty() {
                         match tx.send((i, buff.to_vec(), Ok((response, rtt)), st, rt)) {
                             _ => (),
                         };
@@ -765,7 +765,7 @@ fn send_nx_probes(
             let rt = start_time.elapsed();
             match ret {
                 Ok((response, rtt)) => {
-                    if response.len() > 0 {
+                    if !response.is_empty() {
                         match tx.send((i, buff.to_vec(), Ok((response, rtt)), st, rt)) {
                             _ => (),
                         };
@@ -855,7 +855,7 @@ fn send_u1_probe(
         let (response, _rtt) =
             layer3_ipv6_send(src_ipv6, dst_ipv6, &buff, vec![layers_match], timeout)?;
         rt = start_time.elapsed();
-        if response.len() > 0 {
+        if !response.is_empty() {
             let rr = RequestAndResponse {
                 request: buff,
                 response,
@@ -871,7 +871,7 @@ fn send_u1_probe(
         response: vec![],
     };
     let u1 = U1RR6 { u1: rr, st, rt };
-    return Ok(u1);
+    Ok(u1)
 }
 
 fn send_tecn_probe(
@@ -998,7 +998,7 @@ fn send_tx_probes(
                 let rt = start_time.elapsed();
                 match ret {
                     Ok((response, rtt)) => {
-                        if response.len() > 0 {
+                        if !response.is_empty() {
                             match tx.send((i, buff.to_vec(), Ok((response, rtt)), st, rt)) {
                                 _ => (),
                             };
@@ -1147,7 +1147,7 @@ fn predict_value(features: &[f64], wvec: &[Vec<f64>]) -> Vec<f64> {
         dec_value[idx] = vec_time(features, w);
     }
 
-    let dec_value = dec_value.map(|x| 1.0 / (1.0 + (-x as f64).exp()));
+    let dec_value = dec_value.map(|x| 1.0 / (1.0 + { -x }.exp()));
     dec_value.to_vec()
 }
 
@@ -1189,7 +1189,7 @@ fn isort(arr: &[OSInfo6]) -> Vec<OSInfo6> {
     let mut ret = Vec::new();
     let mut arr = arr.to_vec();
 
-    while arr.len() > 0 {
+    while !arr.is_empty() {
         let (r, new_arr) = pick(&arr);
         arr = new_arr;
         ret.push(r);
@@ -1222,11 +1222,7 @@ pub fn threads_os_probe6(
     let need_cal_hops = |dst_addr: IpAddr| -> bool {
         if dst_addr.is_loopback() {
             false
-        } else if !dst_addr.is_global_x() {
-            false
-        } else {
-            true
-        }
+        } else { !(!dst_addr.is_global_x()) }
     };
 
     let (dst_mac, _interface) = system_route6(src_ipv6, dst_ipv6, timeout)?;
@@ -1262,9 +1258,9 @@ pub fn threads_os_probe6(
     let predict = predict_value(&features, &linear.w);
 
     let mut detect_rets = Vec::new();
-    for (i, (name, score)) in zip(&linear.infolist, &predict).into_iter().enumerate() {
+    for (i, (name, score)) in zip(&linear.infolist, &predict).enumerate() {
         let class = &linear.cpe[i].osclass;
-        if class.len() > 0 {
+        if !class.is_empty() {
             let class = class[0].join(" | ");
             let cpe = linear.cpe[i].cpe.join(" ");
             let dr = OSInfo6 {
@@ -1293,11 +1289,7 @@ pub fn threads_os_probe6(
     let status = if perfect_match == 1 {
         const FP_NOVELTY_THRESHOLD: f64 = 15.0;
         // println!("{}", novelty);
-        if novelty < FP_NOVELTY_THRESHOLD {
-            true
-        } else {
-            false
-        }
+        novelty < FP_NOVELTY_THRESHOLD
     } else {
         false
     };
@@ -1554,7 +1546,7 @@ mod tests {
             packet6::t6_packet_layer3(src_ipv6, src_ports[4], dst_ipv6, dst_closed_port).unwrap();
         let buff_7 =
             packet6::t7_packet_layer3(src_ipv6, src_ports[5], dst_ipv6, dst_closed_port).unwrap();
-        let buffs = vec![buff_2, buff_3, buff_4, buff_5, buff_6, buff_7];
+        let buffs = [buff_2, buff_3, buff_4, buff_5, buff_6, buff_7];
 
         let i = 0;
         let m = ms[i];

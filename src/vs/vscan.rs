@@ -13,7 +13,6 @@ use std::net::TcpStream;
 use std::net::UdpSocket;
 use std::time::Duration;
 use std::time::Instant;
-// use std::fs::File;
 
 use super::dbparser::Match;
 use super::dbparser::ProbeProtocol;
@@ -102,14 +101,11 @@ fn tcp_null_probe(
 
     let mut ret = Vec::new();
     debug!("null probe recv buff len: {}", recv_buff.len());
-    if recv_buff.len() > 0 {
+    if !recv_buff.is_empty() {
         let recv_str = vs_probe_data_to_string(&recv_buff);
         for s in service_probes {
             if s.probe.probename == "NULL" {
-                match s.check(&recv_str) {
-                    Some(mx) => ret.push(mx),
-                    None => (),
-                }
+                if let Some(mx) = s.check(&recv_str) { ret.push(mx) }
             }
         }
     }
@@ -151,14 +147,11 @@ fn tcp_continue_probe(
         recv_buff.retain(|&x| x != 0);
 
         debug!("tcp continue probe recv buff len: {}", recv_buff.len());
-        if recv_buff.len() > 0 {
+        if !recv_buff.is_empty() {
             let recv_str = vs_probe_data_to_string(&recv_buff);
             // debug!("{}", recv_str);
             let mut ret = Vec::new();
-            match sp.check(&recv_str) {
-                Some(mx) => ret.push(mx),
-                None => (),
-            }
+            if let Some(mx) = sp.check(&recv_str) { ret.push(mx) }
             Ok(ret)
         } else {
             Ok(vec![])
@@ -175,18 +168,18 @@ fn tcp_continue_probe(
             // Since the reality is that most ports are used by the service they are registered to in nmap-services,
             // every probe has a list of port numbers that are considered to be most effective.
             if only_tcp_recommended {
-                if sp.ports.len() > 0 && sp.ports.contains(&dst_port) {
+                if !sp.ports.is_empty() && sp.ports.contains(&dst_port) {
                     let r = send_recv_match(stream, sp);
                     match r {
                         Ok(r) => ret.extend(r),
-                        Err(e) => return Err(e.into()),
+                        Err(e) => return Err(e),
                     }
                 }
             } else {
                 let r = send_recv_match(stream, sp);
                 match r {
                     Ok(r) => ret.extend(r),
-                    Err(e) => return Err(e.into()),
+                    Err(e) => return Err(e),
                 }
             }
         }
@@ -229,12 +222,9 @@ fn udp_probe(
         let mut recv_buff = total_recv_buff;
         recv_buff.retain(|&x| x != 0);
 
-        if recv_buff.len() > 0 {
+        if !recv_buff.is_empty() {
             let recv_str = vs_probe_data_to_string(&recv_buff);
-            match sp.check(&recv_str) {
-                Some(mx) => ret.push(mx),
-                None => (),
-            }
+            if let Some(mx) = sp.check(&recv_str) { ret.push(mx) }
         }
         Ok(ret)
     }
@@ -271,14 +261,14 @@ fn udp_probe(
                     let r = run_probe(&socket, sp);
                     match r {
                         Ok(r) => ret.extend(r),
-                        Err(e) => return Err(e.into()),
+                        Err(e) => return Err(e),
                     }
                 }
             } else {
                 let r = run_probe(&socket, sp);
                 match r {
                     Ok(r) => ret.extend(r),
-                    Err(e) => return Err(e.into()),
+                    Err(e) => return Err(e),
                 }
             }
         }
@@ -315,7 +305,7 @@ pub fn threads_vs_probe(
             // Ignore this step here.
             debug!("send null probe");
             let null_probe_ret = tcp_null_probe(&mut stream, &service_probes)?;
-            if null_probe_ret.len() > 0 {
+            if !null_probe_ret.is_empty() {
                 debug!("null probe work, exit");
                 match stream.shutdown(Shutdown::Both) {
                     Ok(_) => (),
@@ -336,7 +326,7 @@ pub fn threads_vs_probe(
                         intensity,
                         &service_probes,
                     )?;
-                    if tcp_ret.len() > 0 {
+                    if !tcp_ret.is_empty() {
                         debug!("tcp continue probe work, exit");
                         match stream.shutdown(Shutdown::Both) {
                             Ok(_) => (),
@@ -402,7 +392,6 @@ mod tests {
 
         if regex.is_match(data) {
             println!("XXX");
-        } else {
-        }
+        } 
     }
 }

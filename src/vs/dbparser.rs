@@ -46,24 +46,24 @@ pub struct VersionInfo {
 impl fmt::Display for VersionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut versioninfo_vec = Vec::new();
-        if self.fix.len() == 0 {
-            if self.p.len() > 0 {
+        if self.fix.is_empty() {
+            if !self.p.is_empty() {
                 versioninfo_vec.push(format!("p:{}", self.p));
             }
-            if self.v.len() > 0 {
+            if !self.v.is_empty() {
                 versioninfo_vec.push(format!("v:{}", self.v));
             }
-            if self.h.len() > 0 {
+            if !self.h.is_empty() {
                 versioninfo_vec.push(format!("h:{}", self.h));
             }
-            if self.i.len() > 0 {
+            if !self.i.is_empty() {
                 versioninfo_vec.push(format!("i:{}", self.i));
             }
-            if self.o.len() > 0 {
+            if !self.o.is_empty() {
                 versioninfo_vec.push(format!("o:{}", self.o));
             }
-            if self.cpe.len() > 0 {
-                versioninfo_vec.push(format!("{}", self.cpe));
+            if !self.cpe.is_empty() {
+                versioninfo_vec.push(self.cpe.to_string());
             }
             let versioninfo = versioninfo_vec.join("\n");
             write!(f, "{}", versioninfo)
@@ -270,7 +270,7 @@ impl ServiceProbe {
 
         // match
         for m in &self.matchs {
-            match self.match_pattern(&m, recv_str) {
+            match self.match_pattern(m, recv_str) {
                 Ok(m) => {
                     match_ret.push(m);
                     break;
@@ -285,10 +285,10 @@ impl ServiceProbe {
             }
         }
 
-        if match_ret.len() == 0 {
+        if match_ret.is_empty() {
             // softmatch
             for sm in &self.softmatchs {
-                match self.softmatch_function(&sm, recv_str) {
+                match self.softmatch_function(sm, recv_str) {
                     Ok(sm) => {
                         softmatch_ret.push(sm);
                         break;
@@ -308,9 +308,9 @@ impl ServiceProbe {
             match_ret.len(),
             softmatch_ret.len()
         );
-        if match_ret.len() > 0 {
+        if !match_ret.is_empty() {
             Some(MatchX::Match(match_ret[0].clone()))
-        } else if softmatch_ret.len() > 0 {
+        } else if !softmatch_ret.is_empty() {
             Some(MatchX::SoftMatch(softmatch_ret[0].clone()))
         } else {
             None
@@ -369,11 +369,8 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
     // lazy code
     fn do_regex_match<'a>(regs: &'a [Regex], line: &'a str) -> Option<Captures<'a>> {
         for reg in regs {
-            match reg.captures(line) {
-                Some(caps) => {
-                    return Some(caps);
-                }
-                None => (),
+            if let Some(caps) = reg.captures(line) {
+                return Some(caps);
             }
         }
         None
@@ -395,7 +392,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
     let mut first_probe = true;
 
     for line in tqdm!(lines.iter()) {
-        if line.starts_with("#") || line.trim().len() == 0 {
+        if line.starts_with("#") || line.trim().is_empty() {
             continue;
         }
         if line.starts_with("Probe") {
@@ -436,12 +433,12 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
 
             first_probe = false;
             /* probe name part */
-            let (probeprotocol, probename, probestring) = match probe_name_reg.captures(&line) {
+            let (probeprotocol, probename, probestring) = match probe_name_reg.captures(line) {
                 Some(caps) => {
                     let probeprotocol = caps.name("probeprotocol").map_or("", |m| m.as_str());
                     let probename = caps.name("probename").map_or("", |m| m.as_str());
                     let probestring = caps.name("probestring").map_or("", |m| m.as_str());
-                    let probestring = unescape_string(&probestring)?;
+                    let probestring = unescape_string(probestring)?;
                     (
                         probeprotocol.trim().to_string(),
                         probename.trim().to_string(),
@@ -464,11 +461,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
                     })
                 }
             };
-            let no_payload = if line.contains("no-payload") {
-                true
-            } else {
-                false
-            };
+            let no_payload = line.contains("no-payload");
 
             let probe = Probe {
                 probeprotocol,
@@ -478,7 +471,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             };
             probe_v = probe;
         } else if line.starts_with("ports") {
-            let ports_str = match ports_reg.captures(&line) {
+            let ports_str = match ports_reg.captures(line) {
                 Some(caps) => {
                     let ports_str = caps.name("ports").map_or("", |m| m.as_str());
                     ports_str
@@ -492,7 +485,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             };
             ports_v = ports_parser(ports_str)?;
         } else if line.starts_with("sslports") {
-            let ports_str = match sslports_reg.captures(&line) {
+            let ports_str = match sslports_reg.captures(line) {
                 Some(caps) => {
                     let ports_str = caps.name("sslports").map_or("", |m| m.as_str());
                     ports_str
@@ -506,7 +499,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             };
             sslports_v = ports_parser(ports_str)?;
         } else if line.starts_with("totalwaitms") {
-            let totalwaitms = match totalwaitms_reg.captures(&line) {
+            let totalwaitms = match totalwaitms_reg.captures(line) {
                 Some(caps) => {
                     let totalwaitms_str = caps.name("totalwaitms").map_or("", |m| m.as_str());
                     totalwaitms_str
@@ -521,7 +514,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             let totalwaitms: usize = totalwaitms.parse()?;
             totalwaitms_v = totalwaitms;
         } else if line.starts_with("tcpwrappedms") {
-            let tcpwrappedms = match tcpwrappedms_reg.captures(&line) {
+            let tcpwrappedms = match tcpwrappedms_reg.captures(line) {
                 Some(caps) => {
                     let tcpwrappedms_str = caps.name("tcpwrappedms").map_or("", |m| m.as_str());
                     tcpwrappedms_str
@@ -536,7 +529,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             let tcpwrappedms: usize = tcpwrappedms.parse()?;
             tcpwrappedms_v = tcpwrappedms;
         } else if line.starts_with("rarity") {
-            let rarity = match rarity_reg.captures(&line) {
+            let rarity = match rarity_reg.captures(line) {
                 Some(caps) => {
                     let rarity_str = caps.name("rarity").map_or("", |m| m.as_str());
                     rarity_str
@@ -551,7 +544,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             let rarity: usize = rarity.parse()?;
             rarity_v = rarity;
         } else if line.starts_with("match") {
-            let caps = match do_regex_match(&match_regs, &line) {
+            let caps = match do_regex_match(&match_regs, line) {
                 Some(caps) => caps,
                 None => {
                     return Err(PistolErrors::ServiceProbesParseError {
@@ -571,7 +564,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             let o_str = caps.name("o").map_or("", |m| m.as_str());
             let cpe_str = caps.name("cpe").map_or("", |m| m.as_str());
 
-            let pattern_str = if modifiers_str.trim().len() > 0 {
+            let pattern_str = if !modifiers_str.trim().is_empty() {
                 format!("(?{}){}", modifiers_str.trim(), pattern_str)
             } else {
                 pattern_str.to_string()
@@ -594,7 +587,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             };
             match_v.push(m);
         } else if line.starts_with("softmatch") {
-            let caps = match do_regex_match(&softmatch_regs, &line) {
+            let caps = match do_regex_match(&softmatch_regs, line) {
                 Some(caps) => caps,
                 None => {
                     return Err(PistolErrors::ServiceProbesParseError {
@@ -608,7 +601,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             let pattern_str = caps.name("pattern").map_or("", |m| m.as_str());
             let modifiers_str = caps.name("modifiers").map_or("", |m| m.as_str());
 
-            let pattern_str = if modifiers_str.trim().len() > 0 {
+            let pattern_str = if !modifiers_str.trim().is_empty() {
                 format!("(?{}){}", modifiers_str.trim(), pattern_str)
             } else {
                 pattern_str.to_string()
@@ -621,7 +614,7 @@ pub fn nmap_service_probes_parser(lines: Vec<String>) -> Result<Vec<ServiceProbe
             };
             softmatch_v.push(sm);
         } else if line.starts_with("fallback") {
-            let fallback = match fallback_reg.captures(&line) {
+            let fallback = match fallback_reg.captures(line) {
                 Some(caps) => {
                     let fallback_str = caps.name("fallback").map_or("", |m| m.as_str());
                     fallback_str
@@ -695,8 +688,8 @@ mod tests {
         let start = test_split[0];
         let end = test_split[1];
 
-        let start_ues = unescape_string(&start).unwrap();
-        let end_ues = unescape_string(&end).unwrap();
+        let start_ues = unescape_string(start).unwrap();
+        let end_ues = unescape_string(end).unwrap();
 
         let start = start_ues[0];
         let end = end_ues[0];
@@ -721,7 +714,7 @@ mod tests {
     #[test]
     fn test_unescape() {
         let test_str = r"\x80\0\0\x28\x72\xFE\x1D\x13\0\0\0\0\0\0\0\x02\0\x01\x86\xA0\0\x01\x97\x7C\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-        let output = unescape_string(&test_str).unwrap();
+        let output = unescape_string(test_str).unwrap();
         println!("{:?}", output);
     }
 }

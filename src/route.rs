@@ -99,17 +99,11 @@ impl fmt::Display for RouteTable {
             new_routes.insert(addr, interface_name);
         }
         let mut output = String::new();
-        match &self.default_route {
-            Some(r) => {
-                output += &format!("ipv4: {}, ", r);
-            }
-            None => (),
+        if let Some(r) = &self.default_route {
+            output += &format!("ipv4: {}, ", r);
         }
-        match &self.default_route6 {
-            Some(r) => {
-                output += &format!("ipv6: {}, ", r);
-            }
-            None => (),
+        if let Some(r) = &self.default_route6 {
+            output += &format!("ipv6: {}, ", r);
         }
         let routes_string = format!("{:?}", new_routes);
         output += &routes_string;
@@ -183,8 +177,8 @@ impl RouteTable {
                                     continue;
                                 }
                             };
-                            let dst = RouteAddr::IpNetwork(dst);
-                            dst
+                            
+                            RouteAddr::IpNetwork(dst)
                         } else {
                             let dst: IpAddr = match dst_str.parse() {
                                 Ok(d) => d,
@@ -193,8 +187,8 @@ impl RouteTable {
                                     continue;
                                 }
                             };
-                            let dst = RouteAddr::IpAddr(dst);
-                            dst
+                            
+                            RouteAddr::IpAddr(dst)
                         };
                         let dev_str = caps.name("dev").map_or("", |m| m.as_str());
                         let dev = match find_interface_by_name(dev_str) {
@@ -239,7 +233,7 @@ impl RouteTable {
             let lines: Vec<String> = output
                 .lines()
                 .map(|x| x.trim().to_string())
-                .filter(|v| v.len() > 0)
+                .filter(|v| !v.is_empty())
                 .collect();
             Ok(lines)
         };
@@ -532,7 +526,7 @@ impl NeighborCache {
         let lines: Vec<&str> = output
             .lines()
             .map(|x| x.trim())
-            .filter(|v| v.len() > 0)
+            .filter(|v| !v.is_empty())
             .collect();
 
         // regex
@@ -696,10 +690,7 @@ impl SystemNetCache {
         Ok(snc)
     }
     pub fn search_mac(&self, ipaddr: IpAddr) -> Option<MacAddr> {
-        let mac = match self.neighbor.get(&ipaddr) {
-            Some(m) => Some(*m),
-            None => None,
-        };
+        let mac = self.neighbor.get(&ipaddr).copied();
         mac
     }
     pub fn update_neighbor_cache(&mut self, ipaddr: IpAddr, mac: MacAddr) {
@@ -759,7 +750,7 @@ mod tests {
         let input_split: Vec<&str> = input
             .split("%")
             .map(|x| x.trim())
-            .filter(|v| v.len() > 0)
+            .filter(|v| !v.is_empty())
             .collect();
         let _ip: IpAddr = input_split[0].parse().unwrap();
         let ipnetwork = IpNetwork::from_str("fe80::").unwrap();

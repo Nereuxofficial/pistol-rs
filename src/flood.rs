@@ -33,6 +33,12 @@ pub struct PortFloods {
     pub etime: DateTime<Local>,
 }
 
+impl Default for PortFloods {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PortFloods {
     pub fn new() -> PortFloods {
         PortFloods {
@@ -53,6 +59,12 @@ pub struct FloodAttacks {
     pub etime: DateTime<Local>,
 }
 
+impl Default for FloodAttacks {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FloodAttacks {
     pub fn new() -> FloodAttacks {
         FloodAttacks {
@@ -67,8 +79,8 @@ impl FloodAttacks {
         self.etime = Local::now(); // assign etime here
         let mut total_send_packets = 0;
         let mut total_send_traffic = 0.0;
-        for (_ip, hm) in &self.summary {
-            for (_port, detail) in hm {
+        for hm in self.summary.values() {
+            for detail in hm.values() {
                 total_send_packets += detail.send_packets;
                 total_send_traffic += detail.send_traffic;
             }
@@ -107,7 +119,7 @@ impl fmt::Display for FloodAttacks {
                 table.add_row(row![ip, port, detail_str]);
             }
         }
-        write!(f, "{}", table.to_string())
+        write!(f, "{}", table)
     }
 }
 
@@ -255,7 +267,7 @@ pub fn flood(
         match dst_addr {
             IpAddr::V4(dst_ipv4) => {
                 for &dst_port in &host.ports {
-                    let dst_port = dst_port.clone();
+                    let dst_port = dst_port;
                     let tx = tx.clone();
                     recv_size += 1;
                     pool.execute(move || {
@@ -278,7 +290,7 @@ pub fn flood(
             }
             IpAddr::V6(dst_ipv6) => {
                 for &dst_port in &host.ports {
-                    let dst_port = dst_port.clone();
+                    let dst_port = dst_port;
                     let tx = tx.clone();
                     recv_size += 1;
                     pool.execute(move || {
@@ -317,14 +329,14 @@ pub fn flood(
             Err(e) => return Err(e),
         }
 
-        match flood_attack_summary.summary.get_mut(&ip.into()) {
+        match flood_attack_summary.summary.get_mut(&ip) {
             Some(hm) => {
                 hm.insert(port, detail);
             }
             None => {
                 let mut hm = HashMap::new();
                 hm.insert(port, detail);
-                flood_attack_summary.summary.insert(ip.into(), hm);
+                flood_attack_summary.summary.insert(ip, hm);
             }
         }
     }

@@ -62,6 +62,12 @@ pub struct Pings {
     tests: usize,
 }
 
+impl Default for Pings {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Pings {
     pub fn new() -> Pings {
         Pings {
@@ -84,15 +90,12 @@ impl Pings {
         let mut total_num = 0;
         // alive hosts
         let mut alive_hosts = 0;
-        for (_ip, ps) in &self.pings {
+        for ps in self.pings.values() {
             self.tests = ps.len();
             for p in ps {
-                match p.status {
-                    PingStatus::Up => {
-                        alive_hosts += 1;
-                        break;
-                    }
-                    _ => (),
+                if p.status == PingStatus::Up {
+                    alive_hosts += 1;
+                    break;
                 }
                 let time_cost = p.etime.signed_duration_since(self.stime).num_milliseconds();
                 if time_cost != 0 {
@@ -126,13 +129,13 @@ impl Pings {
             etime,
         };
 
-        match self.pings.get_mut(&dst_addr.into()) {
+        match self.pings.get_mut(&dst_addr) {
             Some(p) => {
                 p.push(hpr);
             }
             None => {
                 let v = vec![hpr];
-                self.pings.insert(dst_addr.into(), v);
+                self.pings.insert(dst_addr, v);
             }
         }
     }
@@ -157,7 +160,7 @@ impl fmt::Display for Pings {
 
         let pings = &self.pings;
         let pings: BTreeMap<IpAddr, &Vec<HostPings>> =
-            pings.into_iter().map(|(i, p)| (*i, p)).collect();
+            pings.iter().map(|(i, p)| (*i, p)).collect();
         for (i, (ip, hpr)) in pings.into_iter().enumerate() {
             let mut host_total_time_cost = 0;
             let mut host_up_num = 0;
@@ -184,7 +187,7 @@ impl fmt::Display for Pings {
         }
 
         let help_info = "NOTE:\nThe target host is considered alive\nas long as one of the packets returns\na result that is considered to be alive.";
-        table.add_row(Row::new(vec![Cell::new(&help_info).with_hspan(4)]));
+        table.add_row(Row::new(vec![Cell::new(help_info).with_hspan(4)]));
 
         let summary = format!(
             "total cost: {:.2} ms\navg cost: {:.2} ms\nalive hosts: {}",
@@ -329,8 +332,8 @@ pub fn ping(
         Some(t) => t,
         None => {
             let threads_num = target.hosts.len() * tests;
-            let threads_num = threads_num_check(threads_num);
-            threads_num
+            
+            threads_num_check(threads_num)
         }
     };
 
@@ -358,7 +361,7 @@ pub fn ping(
                         Some(s) => s,
                         None => return Err(PistolErrors::CanNotFoundSourceAddress),
                     };
-                    let dst_port = if host.ports.len() > 0 {
+                    let dst_port = if !host.ports.is_empty() {
                         Some(host.ports[0])
                     } else {
                         None
@@ -386,7 +389,7 @@ pub fn ping(
                         Some(s) => s,
                         None => return Err(PistolErrors::CanNotFoundSourceAddress),
                     };
-                    let dst_port = if host.ports.len() > 0 {
+                    let dst_port = if !host.ports.is_empty() {
                         Some(host.ports[0])
                     } else {
                         None
@@ -798,7 +801,7 @@ mod tests {
         for i in 0..10_000 {
             let c2 = Command::new("bash")
                 .arg("-c")
-                .arg(&format!("lsof -p {} | wc -l", pid))
+                .arg(format!("lsof -p {} | wc -l", pid))
                 .output()
                 .unwrap();
             println!(

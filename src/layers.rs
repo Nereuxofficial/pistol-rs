@@ -79,40 +79,22 @@ pub struct Layer2Match {
 
 impl Layer2Match {
     pub fn do_match(&self, ethernet_buff: &[u8]) -> bool {
-        let ethernet_packet = match EthernetPacket::new(&ethernet_buff) {
+        let ethernet_packet = match EthernetPacket::new(ethernet_buff) {
             Some(ethernet_packet) => ethernet_packet,
             None => {
                 return false;
             }
         };
         let m1 = match self.src_mac {
-            Some(src_mac) => {
-                if ethernet_packet.get_source() == src_mac {
-                    true
-                } else {
-                    false
-                }
-            }
+            Some(src_mac) => ethernet_packet.get_source() == src_mac,
             None => true, // wild match
         };
         let m2 = match self.dst_mac {
-            Some(dst_mac) => {
-                if ethernet_packet.get_destination() == dst_mac {
-                    true
-                } else {
-                    false
-                }
-            }
+            Some(dst_mac) => ethernet_packet.get_destination() == dst_mac,
             None => true, // wild match
         };
         let m3 = match self.ethernet_type {
-            Some(ethernet_type) => {
-                if ethernet_type == ethernet_packet.get_ethertype() {
-                    true
-                } else {
-                    false
-                }
-            }
+            Some(ethernet_type) => ethernet_type == ethernet_packet.get_ethertype(),
             None => true, // wild match
         };
         m1 & m2 & m3
@@ -134,7 +116,7 @@ impl Layer3Match {
         };
         // early stop
         if m1 {
-            let ethernet_packet = match EthernetPacket::new(&ethernet_buff) {
+            let ethernet_packet = match EthernetPacket::new(ethernet_buff) {
                 Some(ethernet_packet) => ethernet_packet,
                 None => {
                     return false;
@@ -148,32 +130,19 @@ impl Layer3Match {
                     };
                     let m2 = match self.src_addr {
                         Some(src_addr) => match src_addr {
-                            IpAddr::V4(src_ipv4) => {
-                                if ipv4_packet.get_source() == src_ipv4 {
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
+                            IpAddr::V4(src_ipv4) => ipv4_packet.get_source() == src_ipv4,
                             _ => false,
                         },
                         None => true,
                     };
                     if m2 {
-                        let m3 = match self.dst_addr {
+                        match self.dst_addr {
                             Some(dst_addr) => match dst_addr {
-                                IpAddr::V4(dst_ipv4) => {
-                                    if ipv4_packet.get_destination() == dst_ipv4 {
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                }
+                                IpAddr::V4(dst_ipv4) => ipv4_packet.get_destination() == dst_ipv4,
                                 _ => false,
                             },
                             None => true,
-                        };
-                        m3
+                        }
                     } else {
                         false
                     }
@@ -185,32 +154,19 @@ impl Layer3Match {
                     };
                     let m2 = match self.src_addr {
                         Some(src_addr) => match src_addr {
-                            IpAddr::V6(src_ipv6) => {
-                                if ipv6_packet.get_source() == src_ipv6 {
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
+                            IpAddr::V6(src_ipv6) => ipv6_packet.get_source() == src_ipv6,
                             _ => false,
                         },
                         None => true,
                     };
                     if m2 {
-                        let m3 = match self.dst_addr {
+                        match self.dst_addr {
                             Some(dst_addr) => match dst_addr {
-                                IpAddr::V6(dst_ipv6) => {
-                                    if ipv6_packet.get_destination() == dst_ipv6 {
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                }
+                                IpAddr::V6(dst_ipv6) => ipv6_packet.get_destination() == dst_ipv6,
                                 _ => false,
                             },
                             None => true,
-                        };
-                        m3
+                        }
                     } else {
                         false
                     }
@@ -223,13 +179,7 @@ impl Layer3Match {
                     };
                     let m2 = match self.src_addr {
                         Some(src_addr) => match src_addr {
-                            IpAddr::V4(src_ipv4) => {
-                                if arp_packet.get_sender_proto_addr() == src_ipv4 {
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
+                            IpAddr::V4(src_ipv4) => arp_packet.get_sender_proto_addr() == src_ipv4,
                             _ => false,
                         },
                         None => true,
@@ -238,11 +188,7 @@ impl Layer3Match {
                         let m3 = match self.dst_addr {
                             Some(dst_addr) => match dst_addr {
                                 IpAddr::V4(dst_ipv4) => {
-                                    if arp_packet.get_target_proto_addr() == dst_ipv4 {
-                                        true
-                                    } else {
-                                        false
-                                    }
+                                    arp_packet.get_target_proto_addr() == dst_ipv4
                                 }
                                 _ => false,
                             },
@@ -275,7 +221,7 @@ impl Layer4MatchTcpUdp {
             None => true,
         };
         if m1 {
-            let ethernet_packet = match EthernetPacket::new(&ethernet_buff) {
+            let ethernet_packet = match EthernetPacket::new(ethernet_buff) {
                 Some(ethernet_packet) => ethernet_packet,
                 None => {
                     return false;
@@ -331,27 +277,14 @@ impl Layer4MatchTcpUdp {
                 _ => (0, 0),
             };
             let m2 = match self.src_port {
-                Some(src_port) => {
-                    if src_port == r_src_port {
-                        true
-                    } else {
-                        false
-                    }
-                }
+                Some(src_port) => src_port == r_src_port,
                 None => true,
             };
             if m2 {
-                let m3 = match self.dst_port {
-                    Some(dst_port) => {
-                        if dst_port == r_dst_port {
-                            true
-                        } else {
-                            false
-                        }
-                    }
+                match self.dst_port {
+                    Some(dst_port) => dst_port == r_dst_port,
                     None => true,
-                };
-                m3
+                }
             } else {
                 false
             }
@@ -375,7 +308,7 @@ impl Layer4MatchIcmp {
             None => true,
         };
         if m1 {
-            let ethernet_packet = match EthernetPacket::new(&ethernet_buff) {
+            let ethernet_packet = match EthernetPacket::new(ethernet_buff) {
                 Some(ethernet_packet) => ethernet_packet,
                 None => {
                     return false;
@@ -404,27 +337,14 @@ impl Layer4MatchIcmp {
             };
             if m_icmp {
                 let m2 = match self.types {
-                    Some(types) => {
-                        if types == r_types {
-                            true
-                        } else {
-                            false
-                        }
-                    }
+                    Some(types) => types == r_types,
                     None => true,
                 };
                 if m2 {
-                    let m3 = match self.codes {
-                        Some(codes) => {
-                            if codes == r_codes {
-                                true
-                            } else {
-                                false
-                            }
-                        }
+                    match self.codes {
+                        Some(codes) => codes == r_codes,
                         None => true,
-                    };
-                    m3
+                    }
                 } else {
                     false
                 }
@@ -451,7 +371,7 @@ impl Layer4MatchIcmpv6 {
             None => true,
         };
         if m1 {
-            let ethernet_packet = match EthernetPacket::new(&ethernet_buff) {
+            let ethernet_packet = match EthernetPacket::new(ethernet_buff) {
                 Some(ethernet_packet) => ethernet_packet,
                 None => {
                     return false;
@@ -484,27 +404,14 @@ impl Layer4MatchIcmpv6 {
             if m_icmpv6 {
                 // println!("types: {:?}, codes: {:?}", r_types, r_codes);
                 let m2 = match self.icmpv6_type {
-                    Some(types) => {
-                        if types == r_types {
-                            true
-                        } else {
-                            false
-                        }
-                    }
+                    Some(types) => types == r_types,
                     None => true,
                 };
                 if m2 {
-                    let m3 = match self.icmpv6_code {
-                        Some(codes) => {
-                            if codes == r_codes {
-                                true
-                            } else {
-                                false
-                            }
-                        }
+                    match self.icmpv6_code {
+                        Some(codes) => codes == r_codes,
                         None => true,
-                    };
-                    m3
+                    }
                 } else {
                     false
                 }
@@ -543,7 +450,7 @@ fn datalink_channel(
     interface: &NetworkInterface,
 ) -> Result<Option<(Box<dyn DataLinkSender>, Box<dyn DataLinkReceiver>)>, PistolErrors> {
     let cfg = pnet::datalink::Config::default();
-    match datalink::channel(&interface, cfg) {
+    match datalink::channel(interface, cfg) {
         Ok(Ethernet(tx, rx)) => Ok(Some((tx, rx))),
         Ok(_) => Ok(None),
         Err(e) => Err(e.into()),
@@ -554,7 +461,7 @@ pub fn _print_packet_as_wireshark_format(buff: &[u8]) {
     let mut i = 0;
     for b in buff {
         if i % 16 == 0 {
-            print!("\n");
+            println!();
         }
         let mut x = format!("{:X}", b);
         // println!("{}", x.len());
@@ -566,7 +473,7 @@ pub fn _print_packet_as_wireshark_format(buff: &[u8]) {
         print!("{x}");
         i += 1;
     }
-    println!("");
+    println!();
 }
 
 pub fn layer2_send(
@@ -601,12 +508,10 @@ pub fn layer2_send(
     let final_buff = ethernet_buff[..(ETHERNET_HEADER_SIZE + send_buff.len())].to_vec();
     // _print_packet_as_wireshark_format(&final_buff);
     let send_time = Instant::now();
-    match sender.send_to(&final_buff, Some(interface)) {
-        Some(r) => match r {
-            Err(e) => return Err(e.into()),
-            _ => (),
-        },
-        None => (),
+    if let Some(r) = sender.send_to(&final_buff, Some(interface)) {
+        if let Err(e) = r {
+            return Err(e.into());
+        }
     }
 
     let start_time = Instant::now();
@@ -623,13 +528,10 @@ pub fn layer2_send(
                 }
             };
             for m in &layers_match {
-                match m.do_match(buff) {
-                    true => {
-                        debug!("match found: {:?}", m);
-                        let rtt = send_time.elapsed();
-                        return Ok((buff.to_vec(), rtt));
-                    }
-                    false => (),
+                if m.do_match(buff) {
+                    debug!("match found: {:?}", m);
+                    let rtt = send_time.elapsed();
+                    return Ok((buff.to_vec(), rtt));
                 }
             }
         }
@@ -713,7 +615,7 @@ pub fn system_route(
     let interface = match find_interface_by_ip(src_ipv4.into()) {
         Some(i) => i,
         None => {
-            let interface = match system_cache_search_route(dst_ipv4.into()) {
+            match system_cache_search_route(dst_ipv4.into()) {
                 Some(i) => i,
                 None => {
                     // The system route table not contain this ipaddr,
@@ -724,8 +626,7 @@ pub fn system_route(
                     };
                     default_route.dev
                 }
-            };
-            interface
+            }
         }
     };
 
@@ -744,9 +645,10 @@ pub fn system_route(
                     Some(r) => r,
                     None => return Err(PistolErrors::CanNotFoundRouterAddress),
                 };
-                let dst_mac = match default_route.via {
+
+                match default_route.via {
                     IpAddr::V4(default_route_ipv4) => {
-                        let dst_mac = match system_cache_search_mac(default_route_ipv4.into()) {
+                        match system_cache_search_mac(default_route_ipv4.into()) {
                             Some(m) => m,
                             None => match arp(src_ipv4, default_route_ipv4, timeout)? {
                                 (Some(m), _rtt) => {
@@ -755,12 +657,10 @@ pub fn system_route(
                                 }
                                 (_, _) => return Err(PistolErrors::CanNotFoundRouteMacAddress),
                             },
-                        };
-                        dst_mac
+                        }
                     }
                     _ => return Err(PistolErrors::CanNotFoundRouterAddress),
-                };
-                dst_mac
+                }
             }
         }
     };
@@ -868,7 +768,7 @@ fn ndp_ns(
         length: 1,
         data: src_mac.octets().to_vec(),
     };
-    icmpv6_header.set_options(&vec![ndp_option]);
+    icmpv6_header.set_options(&[ndp_option]);
 
     let mut icmpv6_header = MutableIcmpv6Packet::new(&mut ipv6_buff[IPV6_HEADER_SIZE..]).unwrap();
     let checksum = icmpv6::checksum(&icmpv6_header.to_immutable(), &src_ipv6, &dst_multicast);
@@ -953,7 +853,7 @@ fn ndp_rs(
         length: 1,
         data: src_mac.octets().to_vec(),
     };
-    icmpv6_header.set_options(&vec![ndp_option]);
+    icmpv6_header.set_options(&[ndp_option]);
 
     let mut icmpv6_header = MutableIcmpv6Packet::new(&mut ipv6_buff[IPV6_HEADER_SIZE..]).unwrap();
     let checksum = icmpv6::checksum(&icmpv6_header.to_immutable(), &src_ipv6, &route_addr_2);
@@ -976,6 +876,7 @@ fn ndp_rs(
     };
     let layers_match = LayersMatch::Layer4MatchIcmpv6(layer4_icmpv6);
 
+    #[allow(clippy::zero_prefixed_literal)]
     let dst_mac = MacAddr(33, 33, 00, 00, 00, 02);
     let ethernet_type = EtherTypes::Ipv6;
     let (r, rtt) = layer2_send(
@@ -1006,7 +907,7 @@ pub fn system_route6(
     let interface = match find_interface_by_ip(src_ipv6.into()) {
         Some(i) => i,
         None => {
-            let interface = match system_cache_search_route(dst_ipv6.into()) {
+            match system_cache_search_route(dst_ipv6.into()) {
                 Some(i) => i,
                 None => {
                     // The system route table not contain this ipaddr,
@@ -1017,8 +918,7 @@ pub fn system_route6(
                     };
                     default_route.dev
                 }
-            };
-            interface
+            }
         }
     };
 
@@ -1037,9 +937,10 @@ pub fn system_route6(
                     Some(r) => r,
                     None => return Err(PistolErrors::CanNotFoundRouterAddress),
                 };
-                let dst_mac = match default_route.via {
+
+                match default_route.via {
                     IpAddr::V6(default_route_ipv6) => {
-                        let dst_mac = match system_cache_search_mac(default_route_ipv6.into()) {
+                        match system_cache_search_mac(default_route_ipv6.into()) {
                             Some(m) => m,
                             None => match ndp_rs(src_ipv6, timeout)? {
                                 (Some(m), _rtt) => {
@@ -1048,12 +949,10 @@ pub fn system_route6(
                                 }
                                 (_, _) => return Err(PistolErrors::CanNotFoundRouteMacAddress),
                             },
-                        };
-                        dst_mac
+                        }
                     }
                     _ => return Err(PistolErrors::CanNotFoundRouterAddress),
-                };
-                dst_mac
+                }
             }
         }
     };

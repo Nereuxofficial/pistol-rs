@@ -127,7 +127,7 @@ impl TargetFingerprint {
 
 impl fmt::Display for TargetFingerprint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut output = format!("{}", self.scan);
+        let mut output = self.scan.to_string();
         let seqx_str = format!("\n{}", self.seqx);
         let opsx_str = format!("\n{}", self.opsx);
         let winx_str = format!("\n{}", self.winx);
@@ -232,25 +232,25 @@ pub fn get_scan_line(
     let p = "RUST";
 
     // SCAN(V=5.05BETA1%D=8/23%OT=22%CT=1%CU=42341%PV=N%DS=0%DC=L%G=Y%TM=4A91CB90%P=i686-pc-linux-gnu)
-    let info_str = match dst_addr {
+    
+    match dst_addr {
         IpAddr::V4(_) => {
-            let info_str = if m.len() > 0 {
+            
+            if !m.is_empty() {
                 format!("SCAN(V={v}%D={date}%OT={dst_open_tcp_port}%CT={dst_closed_tcp_port}%CU={dst_closed_udp_port}PV={pv}%DS={ds}%DC={dc}%G={g}%M={m}%TM={tm}%P={p})", )
             } else {
                 format!("SCAN(V={v}%D={date}%OT={dst_open_tcp_port}%CT={dst_closed_tcp_port}%CU={dst_closed_udp_port}PV={pv}%DS={ds}%DC={dc}%G={g}%TM={tm}%P={p})", )
-            };
-            info_str
+            }
         }
         IpAddr::V6(_) => {
-            let info_str = if m.len() > 0 {
+            
+            if !m.is_empty() {
                 format!("SCAN(V={v}%E=6%D={date}%OT={dst_open_tcp_port}%CT={dst_closed_tcp_port}%CU={dst_closed_udp_port}PV={pv}%DS={ds}%DC={dc}%G={g}%M={m}%TM={tm}%P={p})", )
             } else {
                 format!("SCAN(V={v}%E=6%D={date}%OT={dst_open_tcp_port}%CT={dst_closed_tcp_port}%CU={dst_closed_udp_port}PV={pv}%DS={ds}%DC={dc}%G={g}%TM={tm}%P={p})", )
-            };
-            info_str
+            }
         }
-    };
-    info_str
+    }
 }
 
 fn send_seq_probes(
@@ -299,7 +299,7 @@ fn send_seq_probes(
                 let ret = layer3_ipv4_send(src_ipv4, dst_ipv4, &buff, vec![layers_match], timeout);
                 match ret {
                     Ok((response, rtt)) => {
-                        if response.len() > 0 {
+                        if !response.is_empty() {
                             match tx.send((i, buff.to_vec(), Ok((response, rtt)))) {
                                 _ => (),
                             }
@@ -401,7 +401,7 @@ fn send_ie_probes(
             let ret = layer3_ipv4_send(src_ipv4, dst_ipv4, &buff, vec![layers_match], timeout);
             match ret {
                 Ok((response, rtt)) => {
-                    if response.len() > 0 {
+                    if !response.is_empty() {
                         match tx.send((i, buff.to_vec(), Ok((response, rtt)))) {
                             _ => (),
                         }
@@ -469,7 +469,7 @@ fn send_ecn_probe(
     for _ in 0..MAX_RETRY {
         let (response, _) =
             layer3_ipv4_send(src_ipv4, dst_ipv4, &buff, vec![layers_match], timeout)?;
-        if response.len() > 0 {
+        if !response.is_empty() {
             let rr = RequestAndResponse {
                 request: buff,
                 response,
@@ -486,7 +486,7 @@ fn send_ecn_probe(
     };
 
     let ecn = ECNRR { ecn: rr };
-    return Ok(ecn);
+    Ok(ecn)
 }
 
 fn send_tx_probes(
@@ -579,7 +579,7 @@ fn send_tx_probes(
                 let ret = layer3_ipv4_send(src_ipv4, dst_ipv4, &buff, vec![m], timeout);
                 match ret {
                     Ok((response, rtt)) => {
-                        if response.len() > 0 {
+                        if !response.is_empty() {
                             match tx.send((i, buff.to_vec(), Ok((response, rtt)))) {
                                 _ => (),
                             }
@@ -668,7 +668,7 @@ fn send_u1_probe(
         let (response, _) =
             layer3_ipv4_send(src_ipv4, dst_ipv4, &buff, vec![layers_match], timeout)?;
 
-        if response.len() > 0 {
+        if !response.is_empty() {
             let rr = RequestAndResponse {
                 request: buff,
                 response,
@@ -684,7 +684,7 @@ fn send_u1_probe(
     };
 
     let u1 = U1RR { u1: rr };
-    return Ok(u1);
+    Ok(u1)
 }
 
 fn send_all_probes(
@@ -755,23 +755,23 @@ impl fmt::Display for SEQX {
                 // Do not show R if R == Y.
                 let mut output =
                     format!("SEQ(SP={:X}%GCD={:X}%ISR={:X}", self.sp, self.gcd, self.isr);
-                if self.ti.len() > 0 {
+                if !self.ti.is_empty() {
                     let ti_str = format!("%TI={}", self.ti);
                     output += &ti_str;
                 }
-                if self.ci.len() > 0 {
+                if !self.ci.is_empty() {
                     let ci_str = format!("%CI={}", self.ci);
                     output += &ci_str;
                 }
-                if self.ii.len() > 0 {
+                if !self.ii.is_empty() {
                     let ii_str = format!("%II={}", self.ii);
                     output += &ii_str;
                 }
-                if self.ss.len() > 0 {
+                if !self.ss.is_empty() {
                     let ss_str = format!("%SS={}", self.ss);
                     output += &ss_str;
                 }
-                if self.ts.len() > 0 {
+                if !self.ts.is_empty() {
                     let ts_str = format!("%TS={}", self.ts);
                     output += &ts_str;
                 }
@@ -873,7 +873,7 @@ impl fmt::Display for OPSX {
             "Y" => {
                 let mut first_elem = true;
                 let mut output = String::from("OPS(");
-                if self.o1.len() > 0 {
+                if !self.o1.is_empty() {
                     let ox_str = if first_elem {
                         first_elem = false;
                         format!("O1={}", self.o1)
@@ -882,7 +882,7 @@ impl fmt::Display for OPSX {
                     };
                     output += &ox_str;
                 }
-                if self.o2.len() > 0 {
+                if !self.o2.is_empty() {
                     let ox_str = if first_elem {
                         first_elem = false;
                         format!("O2={}", self.o2)
@@ -891,7 +891,7 @@ impl fmt::Display for OPSX {
                     };
                     output += &ox_str;
                 }
-                if self.o3.len() > 0 {
+                if !self.o3.is_empty() {
                     let ox_str = if first_elem {
                         first_elem = false;
                         format!("O3={}", self.o3)
@@ -900,7 +900,7 @@ impl fmt::Display for OPSX {
                     };
                     output += &ox_str;
                 }
-                if self.o4.len() > 0 {
+                if !self.o4.is_empty() {
                     let ox_str = if first_elem {
                         first_elem = false;
                         format!("O4={}", self.o4)
@@ -909,7 +909,7 @@ impl fmt::Display for OPSX {
                     };
                     output += &ox_str;
                 }
-                if self.o5.len() > 0 {
+                if !self.o5.is_empty() {
                     let ox_str = if first_elem {
                         first_elem = false;
                         format!("O5={}", self.o5)
@@ -918,7 +918,7 @@ impl fmt::Display for OPSX {
                     };
                     output += &ox_str;
                 }
-                if self.o6.len() > 0 {
+                if !self.o6.is_empty() {
                     let ox_str = if first_elem {
                         // first_elem = false;
                         format!("O6={}", self.o6)
@@ -1143,7 +1143,7 @@ impl fmt::Display for ECNX {
             "Y" => {
                 let mut first_elem = true;
                 let mut output = String::from("ECN(");
-                if self.r.len() > 0 {
+                if !self.r.is_empty() {
                     let r_str = if first_elem {
                         first_elem = false;
                         format!("R={}", self.r)
@@ -1152,7 +1152,7 @@ impl fmt::Display for ECNX {
                     };
                     output += &r_str;
                 }
-                if self.df.len() > 0 {
+                if !self.df.is_empty() {
                     let df_str = if first_elem {
                         first_elem = false;
                         format!("DF={}", self.df)
@@ -1188,7 +1188,7 @@ impl fmt::Display for ECNX {
                     };
                     output += &w_str;
                 }
-                if self.o.len() > 0 {
+                if !self.o.is_empty() {
                     let o_str = if first_elem {
                         first_elem = false;
                         format!("O={}", self.o)
@@ -1197,7 +1197,7 @@ impl fmt::Display for ECNX {
                     };
                     output += &o_str;
                 }
-                if self.cc.len() > 0 {
+                if !self.cc.is_empty() {
                     let cc_str = if first_elem {
                         first_elem = false;
                         format!("CC={}", self.cc)
@@ -1305,7 +1305,7 @@ impl fmt::Display for TXX {
             "Y" => {
                 let mut first_elem = true;
                 let mut output = format!("{}(", self.name);
-                if self.r.len() > 0 {
+                if !self.r.is_empty() {
                     let r_str = if first_elem {
                         first_elem = false;
                         format!("R={}", self.r)
@@ -1314,7 +1314,7 @@ impl fmt::Display for TXX {
                     };
                     output += &r_str;
                 }
-                if self.df.len() > 0 {
+                if !self.df.is_empty() {
                     let df_str = if first_elem {
                         first_elem = false;
                         format!("DF={}", self.df)
@@ -1350,7 +1350,7 @@ impl fmt::Display for TXX {
                     };
                     output += &w_str;
                 }
-                if self.s.len() > 0 {
+                if !self.s.is_empty() {
                     let s_str = if first_elem {
                         first_elem = false;
                         format!("S={}", self.s)
@@ -1359,7 +1359,7 @@ impl fmt::Display for TXX {
                     };
                     output += &s_str;
                 }
-                if self.a.len() > 0 {
+                if !self.a.is_empty() {
                     let a_str = if first_elem {
                         first_elem = false;
                         format!("A={}", self.a)
@@ -1368,7 +1368,7 @@ impl fmt::Display for TXX {
                     };
                     output += &a_str;
                 }
-                if self.f.len() > 0 {
+                if !self.f.is_empty() {
                     let f_str = if first_elem {
                         first_elem = false;
                         format!("F={}", self.f)
@@ -1513,7 +1513,7 @@ impl fmt::Display for U1X {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut first_elem = true;
         let mut output = String::from("U1(");
-        if self.r.len() > 0 {
+        if !self.r.is_empty() {
             let r_str = if first_elem {
                 first_elem = false;
                 format!("R={}", self.r)
@@ -1522,7 +1522,7 @@ impl fmt::Display for U1X {
             };
             output += &r_str;
         }
-        if self.df.len() > 0 {
+        if !self.df.is_empty() {
             let df_str = if first_elem {
                 first_elem = false;
                 format!("DF={}", self.df)
@@ -1565,7 +1565,7 @@ impl fmt::Display for U1X {
             format!("%UN={:X}", self.un)
         };
         output += &un_str;
-        if self.ripl.len() > 0 {
+        if !self.ripl.is_empty() {
             let ripl_str = if first_elem {
                 first_elem = false;
                 format!("RIPL={}", self.ripl)
@@ -1574,7 +1574,7 @@ impl fmt::Display for U1X {
             };
             output += &ripl_str;
         }
-        if self.rid.len() > 0 {
+        if !self.rid.is_empty() {
             let rid_str = if first_elem {
                 first_elem = false;
                 format!("RID={}", self.rid)
@@ -1583,7 +1583,7 @@ impl fmt::Display for U1X {
             };
             output += &rid_str;
         }
-        if self.ripck.len() > 0 {
+        if !self.ripck.is_empty() {
             let ripck_str = if first_elem {
                 first_elem = false;
                 format!("RIPCK={}", self.ripck)
@@ -1592,7 +1592,7 @@ impl fmt::Display for U1X {
             };
             output += &ripck_str;
         }
-        if self.ruck.len() > 0 {
+        if !self.ruck.is_empty() {
             let ruck_str = if first_elem {
                 first_elem = false;
                 format!("RUCK={}", self.ruck)
@@ -1601,7 +1601,7 @@ impl fmt::Display for U1X {
             };
             output += &ruck_str;
         }
-        if self.rud.len() > 0 {
+        if !self.rud.is_empty() {
             let rud_str = if first_elem {
                 // first_elem = false;
                 format!("RUD={}", self.rud)
@@ -1689,7 +1689,7 @@ impl fmt::Display for IEX {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut first_elem = true;
         let mut output = String::from("IE(");
-        if self.r.len() > 0 {
+        if !self.r.is_empty() {
             let r_str = if first_elem {
                 first_elem = false;
                 format!("R={}", self.r)
@@ -1698,7 +1698,7 @@ impl fmt::Display for IEX {
             };
             output += &r_str;
         }
-        if self.dfi.len() > 0 {
+        if !self.dfi.is_empty() {
             let dfi_str = if first_elem {
                 first_elem = false;
                 format!("DFI={}", self.dfi)
@@ -1725,7 +1725,7 @@ impl fmt::Display for IEX {
             };
             output += &tg_str;
         }
-        if self.cd.len() > 0 {
+        if !self.cd.is_empty() {
             let cd_str = if first_elem {
                 // first_elem = false;
                 format!("CD={}", self.cd)
@@ -1827,11 +1827,7 @@ pub fn threads_os_probe(
     let need_cal_hops = |dst_addr: IpAddr| -> bool {
         if dst_addr.is_loopback() {
             false
-        } else if !dst_addr.is_global_x() {
-            false
-        } else {
-            true
-        }
+        } else { !(!dst_addr.is_global_x()) }
     };
 
     let scan = match need_cal_hops(dst_ipv4.into()) {
@@ -1906,7 +1902,7 @@ pub fn threads_os_probe(
             }
 
             let detect_rets = sort_pick(&sort_vec, top_k);
-            if detect_rets.len() > 0 {
+            if !detect_rets.is_empty() {
                 Ok((target_fingerprint, detect_rets))
             } else {
                 Err(PistolErrors::OSDetectResultsNullError)

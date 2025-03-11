@@ -77,25 +77,16 @@ pub fn send_icmpv6_ping_packet(
 
     let (ret, _rtt) =
         layer3_ipv6_send(src_ipv6, dst_ipv6, &ipv6_buff, vec![layers_match], timeout)?;
-    match Ipv6Packet::new(&ret) {
-        Some(ipv6_packet) => {
-            match ipv6_packet.get_next_header() {
-                IpNextHeaderProtocols::Icmpv6 => {
-                    match Icmpv6Packet::new(ipv6_packet.payload()) {
-                        Some(icmpv6_packet) => {
-                            let icmpv6_type = icmpv6_packet.get_icmpv6_type();
-                            // let icmpv6_code = icmpv6_packet.get_icmpv6_code();
-                            if icmpv6_type == Icmpv6Type(129) {
-                                return Ok(true);
-                            }
-                        }
-                        None => (),
-                    }
+    if let Some(ipv6_packet) = Ipv6Packet::new(&ret) {
+        if ipv6_packet.get_next_header() == IpNextHeaderProtocols::Icmpv6 {
+            if let Some(icmpv6_packet) = Icmpv6Packet::new(ipv6_packet.payload()) {
+                let icmpv6_type = icmpv6_packet.get_icmpv6_type();
+                // let icmpv6_code = icmpv6_packet.get_icmpv6_code();
+                if icmpv6_type == Icmpv6Type(129) {
+                    return Ok(true);
                 }
-                _ => (),
             }
         }
-        None => (),
     }
     Ok(false)
 }

@@ -325,11 +325,9 @@ pub fn seq_packet_4_layer3(
     tcp_header.set_data_offset(10); // 4 * 10 = 40
 
     // Packet #4: SACK permitted, Timestamp (TSval: 0xFFFFFFFF; TSecr: 0), window scale (10), EOL.
-    tcp_header.set_options(&vec![
-        TcpOption::sack_perm(),
+    tcp_header.set_options(&[TcpOption::sack_perm(),
         TcpOption::timestamp(0xFFFFFFFF, 0x0),
-        TcpOption::wscale(10),
-    ]);
+        TcpOption::wscale(10)]);
     let opt = tcp_header.get_options_raw();
     assert_eq!(opt, PRB_OPT[3]);
 
@@ -440,11 +438,9 @@ pub fn seq_packet_6_layer3(
     tcp_header.set_data_offset(10); // 4 * 10 = 40
 
     // Packet #6: MSS (265), SACK permitted, Timestamp (TSval: 0xFFFFFFFF; TSecr: 0).
-    tcp_header.set_options(&vec![
-        TcpOption::mss(265),
+    tcp_header.set_options(&[TcpOption::mss(265),
         TcpOption::sack_perm(),
-        TcpOption::timestamp(0xFFFFFFFF, 0x0),
-    ]);
+        TcpOption::timestamp(0xFFFFFFFF, 0x0)]);
     let opt = tcp_header.get_options_raw();
     assert_eq!(opt, PRB_OPT[5]);
 

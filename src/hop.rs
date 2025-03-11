@@ -54,26 +54,20 @@ mod tests {
         // let dst_ipv4 = Ipv4Addr::new(114, 114, 114, 114);
         let dst_ipv4 = Ipv4Addr::new(192, 168, 1, 3);
         let src_ipv4 = find_source_addr(None, dst_ipv4).unwrap();
-        match src_ipv4 {
-            Some(src_ipv4) => {
-                let timeout = Duration::new(1, 0);
-                let hops = ipv4_get_hops(src_ipv4, dst_ipv4, timeout).unwrap();
-                println!("{}", hops);
-            }
-            None => (),
+        if let Some(src_ipv4) = src_ipv4 {
+            let timeout = Duration::new(1, 0);
+            let hops = ipv4_get_hops(src_ipv4, dst_ipv4, timeout).unwrap();
+            println!("{}", hops);
         }
     }
     #[test]
     fn test_get_hops6() {
         let src_ipv6 = find_source_addr6(None, TEST_IPV6_LOCAL).unwrap();
-        match src_ipv6 {
-            Some(src_ipv6) => {
-                let dst_ipv6 = TEST_IPV6_LOCAL;
-                let timeout = Duration::new(1, 0);
-                let hops = ipv6_get_hops(src_ipv6, dst_ipv6, timeout).unwrap();
-                println!("{}", hops);
-            }
-            None => (),
+        if let Some(src_ipv6) = src_ipv6 {
+            let dst_ipv6 = TEST_IPV6_LOCAL;
+            let timeout = Duration::new(1, 0);
+            let hops = ipv6_get_hops(src_ipv6, dst_ipv6, timeout).unwrap();
+            println!("{}", hops);
         }
     }
 }

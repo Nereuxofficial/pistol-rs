@@ -1,6 +1,5 @@
 use log::debug;
 use log::warn;
-use num_cpus;
 use pnet::datalink::interfaces;
 use pnet::datalink::MacAddr;
 use pnet::datalink::NetworkInterface;
@@ -8,6 +7,7 @@ use rand::Rng;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
+use std::thread::available_parallelism;
 use std::time::Duration;
 use threadpool::ThreadPool;
 
@@ -108,13 +108,10 @@ pub fn find_source_addr(
             match system_cache_search_route(dst_ipv4.into()) {
                 Some(i) => {
                     for ipnetwork in i.ips {
-                        match ipnetwork.ip() {
-                            IpAddr::V4(src_ipv4) => {
-                                if !src_ipv4.is_loopback() {
-                                    return Ok(Some(src_ipv4));
-                                }
+                        if let IpAddr::V4(src_ipv4) = ipnetwork.ip() {
+                            if !src_ipv4.is_loopback() {
+                                return Ok(Some(src_ipv4));
                             }
-                            _ => (),
                         }
                     }
                 }
@@ -155,17 +152,10 @@ pub fn find_source_addr6(
             match system_cache_search_route(dst_ipv6.into()) {
                 Some(i) => {
                     for ipnetwork in i.ips {
-                        match ipnetwork.ip() {
-                            IpAddr::V6(src_ipv6) => {
-                                if !src_ipv6.is_loopback() {
-                                    if (dst_ipv6.is_global_x() && src_ipv6.is_global_x())
-                                        || (!dst_ipv6.is_global_x() && !src_ipv6.is_global_x())
-                                    {
-                                        return Ok(Some(src_ipv6));
-                                    }
-                                }
+                        if let IpAddr::V6(src_ipv6) = ipnetwork.ip() {
+                            if !src_ipv6.is_loopback() && ((dst_ipv6.is_global_x() && src_ipv6.is_global_x()) || (!dst_ipv6.is_global_x() && !src_ipv6.is_global_x())) {
+                                return Ok(Some(src_ipv6));
                             }
-                            _ => (),
                         }
                     }
                 }
@@ -234,17 +224,16 @@ pub fn random_port_sp(start: u16, end: u16) -> u16 {
 
 /// Returns the number of CPUs in the machine.
 pub fn get_cpu_num() -> usize {
-    num_cpus::get()
-}
+    available_parallelism().map(usize::from).unwrap_or(1)}
 
 pub fn get_threads_pool(threads_num: usize) -> ThreadPool {
-    let pool = if threads_num > 0 {
+    
+    if threads_num > 0 {
         ThreadPool::new(threads_num)
     } else {
         let cpus = get_cpu_num();
         ThreadPool::new(cpus)
-    };
-    pool
+    }
 }
 
 pub fn get_default_timeout() -> Duration {

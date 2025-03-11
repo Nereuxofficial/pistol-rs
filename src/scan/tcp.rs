@@ -107,51 +107,42 @@ pub fn send_syn_scan_packet(
         vec![layers_match_1, layers_match_2],
         timeout,
     )?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags == (TcpFlags::SYN | TcpFlags::ACK) {
-                                // tcp syn/ack response
-                                return Ok((PortStatus::Open, rtt));
-                            } else if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // tcp rst response
-                                return Ok((PortStatus::Closed, rtt));
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags == (TcpFlags::SYN | TcpFlags::ACK) {
+                        // tcp syn/ack response
+                        return Ok((PortStatus::Open, rtt));
+                    } else if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // tcp rst response
+                        return Ok((PortStatus::Closed, rtt));
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                return Ok((PortStatus::Filtered, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        return Ok((PortStatus::Filtered, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PortStatus::Filtered, rtt))
@@ -220,51 +211,42 @@ pub fn send_fin_scan_packet(
         vec![layers_match_1, layers_match_2],
         timeout,
     )?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags == (TcpFlags::SYN | TcpFlags::ACK) {
-                                // tcp syn/ack response
-                                return Ok((PortStatus::Open, rtt));
-                            } else if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // tcp rst packet
-                                return Ok((PortStatus::Closed, rtt));
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags == (TcpFlags::SYN | TcpFlags::ACK) {
+                        // tcp syn/ack response
+                        return Ok((PortStatus::Open, rtt));
+                    } else if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // tcp rst packet
+                        return Ok((PortStatus::Closed, rtt));
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                return Ok((PortStatus::Filtered, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        return Ok((PortStatus::Filtered, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PortStatus::OpenOrFiltered, rtt))
@@ -333,48 +315,39 @@ pub fn send_ack_scan_packet(
         vec![layers_match_1, layers_match_2],
         timeout,
     )?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // tcp rst response
-                                return Ok((PortStatus::Unfiltered, rtt));
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // tcp rst response
+                        return Ok((PortStatus::Unfiltered, rtt));
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                return Ok((PortStatus::Filtered, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        return Ok((PortStatus::Filtered, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PortStatus::Filtered, rtt))
@@ -443,48 +416,39 @@ pub fn send_null_scan_packet(
         vec![layers_match_1, layers_match_2],
         timeout,
     )?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // tcp rst response
-                                return Ok((PortStatus::Closed, rtt));
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // tcp rst response
+                        return Ok((PortStatus::Closed, rtt));
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                return Ok((PortStatus::Filtered, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        return Ok((PortStatus::Filtered, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PortStatus::OpenOrFiltered, rtt))
@@ -554,48 +518,39 @@ pub fn send_xmas_scan_packet(
         vec![layers_match_1, layers_match_2],
         timeout,
     )?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // tcp rst response
-                                return Ok((PortStatus::Closed, rtt));
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // tcp rst response
+                        return Ok((PortStatus::Closed, rtt));
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                return Ok((PortStatus::Filtered, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        return Ok((PortStatus::Filtered, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PortStatus::OpenOrFiltered, rtt))
@@ -664,53 +619,44 @@ pub fn send_window_scan_packet(
         vec![layers_match_1, layers_match_2],
         timeout,
     )?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                if tcp_packet.get_window() > 0 {
-                                    // tcp rst response with non-zero window field
-                                    return Ok((PortStatus::Open, rtt));
-                                } else {
-                                    // tcp rst response with zero window field
-                                    return Ok((PortStatus::Closed, rtt));
-                                }
-                            }
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        if tcp_packet.get_window() > 0 {
+                            // tcp rst response with non-zero window field
+                            return Ok((PortStatus::Open, rtt));
+                        } else {
+                            // tcp rst response with zero window field
+                            return Ok((PortStatus::Closed, rtt));
                         }
-                        None => (),
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                return Ok((PortStatus::Filtered, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        return Ok((PortStatus::Filtered, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PortStatus::Filtered, rtt))
@@ -779,48 +725,39 @@ pub fn send_maimon_scan_packet(
         vec![layers_match_1, layers_match_2],
         timeout,
     )?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // tcp rst response
-                                return Ok((PortStatus::Closed, rtt));
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // tcp rst response
+                        return Ok((PortStatus::Closed, rtt));
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                return Ok((PortStatus::Filtered, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        return Ok((PortStatus::Filtered, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     // no response received (even after retransmissions)
     Ok((PortStatus::OpenOrFiltered, rtt))
@@ -904,50 +841,41 @@ pub fn send_idle_scan_packet(
     )?;
 
     let mut zombie_ip_id_1 = 0;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            // println!(">>> {}", tcp_packet.get_flags());
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // 2. zombie return rst packet, get this packet ip id
-                                zombie_ip_id_1 = ipv4_packet.get_identification();
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    // println!(">>> {}", tcp_packet.get_flags());
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // 2. zombie return rst packet, get this packet ip id
+                        zombie_ip_id_1 = ipv4_packet.get_identification();
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                // dst is unreachable ignore this port
-                                return Ok((PortStatus::Unreachable, None, rtt_1));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        // dst is unreachable ignore this port
+                        return Ok((PortStatus::Unreachable, None, rtt_1));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
 
     // 3. forge a syn packet from the zombie to the target
@@ -985,56 +913,47 @@ pub fn send_idle_scan_packet(
 
     let mut zombie_ip_id_2 = 0;
     let rtt = (rtt_1 + rtt_2) / 2;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Tcp => {
-                    match TcpPacket::new(ipv4_packet.payload()) {
-                        Some(tcp_packet) => {
-                            // println!(">>> {}", tcp_packet.get_flags());
-                            let tcp_flags = tcp_packet.get_flags();
-                            if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
-                                // 5. zombie return rst packet again, get this packet ip id
-                                zombie_ip_id_2 = ipv4_packet.get_identification();
-                            }
-                        }
-                        None => (),
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        match ipv4_packet.get_next_level_protocol() {
+            IpNextHeaderProtocols::Tcp => {
+                if let Some(tcp_packet) = TcpPacket::new(ipv4_packet.payload()) {
+                    // println!(">>> {}", tcp_packet.get_flags());
+                    let tcp_flags = tcp_packet.get_flags();
+                    if tcp_flags & TCP_FLAGS_RST_MASK == TcpFlags::RST {
+                        // 5. zombie return rst packet again, get this packet ip id
+                        zombie_ip_id_2 = ipv4_packet.get_identification();
                     }
                 }
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            let icmp_code = icmp_packet.get_icmp_code();
-                            let codes = vec![
-                                        destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
-                                        destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
-                                        destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
-                                        destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
-                                        destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
-                                        destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
-                                    ];
-                            if icmp_type == IcmpTypes::DestinationUnreachable
-                                && codes.contains(&icmp_code)
-                            {
-                                // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
-                                // dst is unreachable ignore this port
-                                return Ok((PortStatus::Unreachable, None, rtt));
-                            }
-                        }
-                        None => (),
-                    }
-                }
-                _ => (),
             }
+            IpNextHeaderProtocols::Icmp => {
+                if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                    let icmp_type = icmp_packet.get_icmp_type();
+                    let icmp_code = icmp_packet.get_icmp_code();
+                    let codes = [
+                                destination_unreachable::IcmpCodes::DestinationHostUnreachable, // 1
+                                destination_unreachable::IcmpCodes::DestinationProtocolUnreachable, // 2
+                                destination_unreachable::IcmpCodes::DestinationPortUnreachable, // 3
+                                destination_unreachable::IcmpCodes::NetworkAdministrativelyProhibited, // 9
+                                destination_unreachable::IcmpCodes::HostAdministrativelyProhibited, // 10
+                                destination_unreachable::IcmpCodes::CommunicationAdministrativelyProhibited, // 13
+                            ];
+                    if icmp_type == IcmpTypes::DestinationUnreachable
+                        && codes.contains(&icmp_code)
+                    {
+                        // icmp unreachable error (type 3, code 1, 2, 3, 9, 10, or 13)
+                        // dst is unreachable ignore this port
+                        return Ok((PortStatus::Unreachable, None, rtt));
+                    }
+                }
+            }
+            _ => (),
         }
-        None => (),
     }
     if zombie_ip_id_1 == 0 && zombie_ip_id_2 == 0 {
-        return Err(PistolErrors::IdleScanAllZeroError {
+        Err(PistolErrors::IdleScanAllZeroError {
             zombie_ipv4,
             zombie_port,
-        });
+        })
     } else if zombie_ip_id_2 - zombie_ip_id_1 >= 2 {
         Ok((
             PortStatus::Open,

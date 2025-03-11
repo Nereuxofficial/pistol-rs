@@ -51,6 +51,12 @@ pub struct ArpScans {
     tests: usize,
 }
 
+impl Default for ArpScans {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArpScans {
     pub fn new() -> ArpScans {
         ArpScans {
@@ -86,7 +92,7 @@ impl fmt::Display for ArpScans {
             .with_hspan(3)]));
 
         let ah = &self.alives;
-        let ah: BTreeMap<Ipv4Addr, &AliveHost> = ah.into_iter().map(|(i, a)| (*i, a)).collect();
+        let ah: BTreeMap<Ipv4Addr, &AliveHost> = ah.iter().map(|(i, a)| (*i, a)).collect();
         for (ip, aah) in ah {
             table.add_row(row![c -> ip, c -> aah.mac_addr, c -> aah.ouis]);
         }
@@ -192,8 +198,8 @@ pub fn arp_scan(
         Some(t) => t,
         None => {
             let threads_num = target.hosts.len();
-            let threads_num = threads_num_check(threads_num);
-            threads_num
+            
+            threads_num_check(threads_num)
         }
     };
 
@@ -227,47 +233,44 @@ pub fn arp_scan(
     let iter = rx.into_iter().take(recv_size);
     for v in iter {
         match v {
-            Ok((target_ipv4, target_mac)) => match target_mac? {
-                (Some(m), _rtt) => {
-                    let mut ouis = String::new();
-                    let mut mac_prefix = String::new();
-                    let m0 = format!("{:X}", m.0);
-                    let m1 = format!("{:X}", m.1);
-                    let m2 = format!("{:X}", m.2);
-                    // m0
-                    let i = if m0.len() < 2 { 2 - m0.len() } else { 0 };
-                    if i > 0 {
-                        for _ in 0..i {
-                            mac_prefix += "0";
-                        }
+            Ok((target_ipv4, target_mac)) => if let (Some(m), _rtt) = target_mac? {
+                let mut ouis = String::new();
+                let mut mac_prefix = String::new();
+                let m0 = format!("{:X}", m.0);
+                let m1 = format!("{:X}", m.1);
+                let m2 = format!("{:X}", m.2);
+                // m0
+                let i = if m0.len() < 2 { 2 - m0.len() } else { 0 };
+                if i > 0 {
+                    for _ in 0..i {
+                        mac_prefix += "0";
                     }
-                    mac_prefix += &m0;
-                    // m1
-                    let i = if m1.len() < 2 { 2 - m1.len() } else { 0 };
-                    if i > 0 {
-                        for _ in 0..i {
-                            mac_prefix += "0";
-                        }
-                    }
-                    mac_prefix += &m1;
-                    // m2
-                    let i = if m2.len() < 2 { 2 - m2.len() } else { 0 };
-                    if i > 0 {
-                        for _ in 0..i {
-                            mac_prefix += "0";
-                        }
-                    }
-                    mac_prefix += &m2;
-                    // println!("{}", mac_prefix);
-                    for p in &nmap_mac_prefixes {
-                        if mac_prefix == p.prefix {
-                            ouis = p.ouis.to_string();
-                        }
-                    }
-                    let aah = AliveHost { mac_addr: m, ouis };
-                    ret.alives.insert(target_ipv4, aah);
                 }
-                (_, _) => (),
+                mac_prefix += &m0;
+                // m1
+                let i = if m1.len() < 2 { 2 - m1.len() } else { 0 };
+                if i > 0 {
+                    for _ in 0..i {
+                        mac_prefix += "0";
+                    }
+                }
+                mac_prefix += &m1;
+                // m2
+                let i = if m2.len() < 2 { 2 - m2.len() } else { 0 };
+                if i > 0 {
+                    for _ in 0..i {
+                        mac_prefix += "0";
+                    }
+                }
+                mac_prefix += &m2;
+                // println!("{}", mac_prefix);
+                for p in &nmap_mac_prefixes {
+                    if mac_prefix == p.prefix {
+                        ouis = p.ouis.to_string();
+                    }
+                }
+                let aah = AliveHost { mac_addr: m, ouis };
+                ret.alives.insert(target_ipv4, aah);
             },
             Err(e) => return Err(e),
         }
@@ -323,6 +326,12 @@ pub struct TcpUdpScans {
     tests: usize,
 }
 
+impl Default for TcpUdpScans {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TcpUdpScans {
     pub fn new() -> TcpUdpScans {
         TcpUdpScans {
@@ -336,10 +345,7 @@ impl TcpUdpScans {
         }
     }
     pub fn get(&self, k: &IpAddr) -> Option<HashMap<u16, Vec<PortScans>>> {
-        match self.scans.get(k) {
-            Some(ph) => Some(ph.clone()),
-            None => None,
-        }
+        self.scans.get(k).cloned()
     }
     pub fn enrichment(&mut self) {
         // assign the end time
@@ -349,16 +355,13 @@ impl TcpUdpScans {
         let mut total_num = 0;
         // open ports
         let mut open_ports = 0;
-        for (_ip, ports_status) in &self.scans {
-            for (_port, psr) in ports_status {
+        for ports_status in self.scans.values() {
+            for psr in ports_status.values() {
                 self.tests = psr.len();
                 for ps in psr {
-                    match ps.status {
-                        PortStatus::Open => {
-                            open_ports += 1;
-                            break;
-                        }
-                        _ => (),
+                    if ps.status == PortStatus::Open {
+                        open_ports += 1;
+                        break;
                     }
                     let time_cost = ps.etime.signed_duration_since(ps.stime);
                     if time_cost.num_milliseconds() != 0 {
@@ -425,10 +428,10 @@ impl fmt::Display for TcpUdpScans {
         // convert hashmap to btreemap here
         let scans = &self.scans;
         let scans: BTreeMap<IpAddr, &HashMap<u16, Vec<PortScans>>> =
-            scans.into_iter().map(|(i, h)| (*i, h)).collect();
+            scans.iter().map(|(i, h)| (*i, h)).collect();
         for (i, (ip, ports_status)) in scans.into_iter().enumerate() {
             let ports_status: BTreeMap<u16, &Vec<PortScans>> =
-                ports_status.into_iter().map(|(p, s)| (*p, s)).collect();
+                ports_status.iter().map(|(p, s)| (*p, s)).collect();
             let mut total_ports_time_cost = 0;
 
             for (port, psr) in ports_status {
@@ -479,7 +482,7 @@ impl fmt::Display for TcpUdpScans {
             }
         }
 
-        let help_info = format!("NOTE:\nO: OPEN, OF: OPEN_OR_FILTERED, F: FILTERED,\nUF: UNFILTERED, C: CLOSED, UR: UNREACHABLE,\nCF: CLOSE_OF_FILTERED, E: ERROR, OL: OFFLINE.");
+        let help_info = "NOTE:\nO: OPEN, OF: OPEN_OR_FILTERED, F: FILTERED,\nUF: UNFILTERED, C: CLOSED, UR: UNREACHABLE,\nCF: CLOSE_OF_FILTERED, E: ERROR, OL: OFFLINE.".to_string();
         table.add_row(Row::new(vec![Cell::new(&help_info).with_hspan(5)]));
 
         let summary = format!(
@@ -545,7 +548,7 @@ fn threads_scan(
                 timeout,
             ) {
                 Ok((status, _idel_rets, rtt)) => (status, rtt),
-                Err(e) => return Err(e.into()),
+                Err(e) => return Err(e),
             }
         }
         ScanMethods::Udp => {
@@ -622,8 +625,8 @@ pub fn scan(
             for host in &target.hosts {
                 threads_num += host.ports.len() * tests;
             }
-            let threads_num = threads_num_check(threads_num);
-            threads_num
+            
+            threads_num_check(threads_num)
         }
     };
 
@@ -708,14 +711,14 @@ pub fn scan(
         match v {
             Ok((port_status, rtt)) => {
                 // println!("rtt: {:.2}", rtt.as_secs_f32());
-                port_scan_ret.insert(dst_ipv4.into(), dst_port, port_status, rtt, stime, etime);
+                port_scan_ret.insert(dst_ipv4, dst_port, port_status, rtt, stime, etime);
             }
             Err(e) => {
                 let rtt = Duration::new(0, 0);
                 match e {
                     PistolErrors::CanNotFoundMacAddress => {
                         port_scan_ret.insert(
-                            dst_ipv4.into(),
+                            dst_ipv4,
                             dst_port,
                             PortStatus::Offline,
                             rtt,
@@ -726,7 +729,7 @@ pub fn scan(
                     _ => {
                         warn!("scan error: {}", e);
                         port_scan_ret.insert(
-                            dst_ipv4.into(),
+                            dst_ipv4,
                             dst_port,
                             PortStatus::Error,
                             rtt,

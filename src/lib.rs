@@ -1,6 +1,5 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("lib.md")]
-use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fmt;
@@ -8,6 +7,7 @@ use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::net::Ipv6Addr;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::sync::Mutex;
 use subnetwork::Ipv4Pool;
 
@@ -51,7 +51,7 @@ const TEST_IPV6_LOCAL: Ipv6Addr = Ipv6Addr::new(0xfe80, 0, 0, 0, 0x20c, 0x29ff, 
 // dead host
 const TEST_IPV6_LOCAL_DEAD: Ipv6Addr = Ipv6Addr::new(0xfe80, 0, 0, 0, 0x20c, 0x29ff, 0xfe2c, 0x9e5);
 
-static SYSTEM_NET_CACHE: Lazy<Arc<Mutex<SystemNetCache>>> = Lazy::new(|| {
+static SYSTEM_NET_CACHE: LazyLock<Arc<Mutex<SystemNetCache>>> = LazyLock::new(|| {
     let snc = SystemNetCache::init().expect("can not init the system net cache");
     Arc::new(Mutex::new(snc))
 });
@@ -290,7 +290,7 @@ pub struct Logger {}
 
 impl Logger {
     pub fn init_debug_logging() -> Result<(), PistolErrors> {
-        let _ = env_logger::builder()
+        env_logger::builder()
             // .target(env_logger::Target::Stdout)
             .filter_level(log::LevelFilter::Debug)
             .is_test(false)
@@ -298,7 +298,7 @@ impl Logger {
         Ok(())
     }
     pub fn init_warn_logging() -> Result<(), PistolErrors> {
-        let _ = env_logger::builder()
+        env_logger::builder()
             // .target(env_logger::Target::Stdout)
             .filter_level(log::LevelFilter::Warn)
             .is_test(false)
@@ -306,7 +306,7 @@ impl Logger {
         Ok(())
     }
     pub fn init_info_logging() -> Result<(), PistolErrors> {
-        let _ = env_logger::builder()
+        env_logger::builder()
             // .target(env_logger::Target::Stdout)
             .filter_level(log::LevelFilter::Info)
             .is_test(false)
@@ -328,11 +328,7 @@ impl Ipv4CheckMethods for Ipv4Addr {
             true
         } else if octets[0] == 192 && octets[1] == 168 {
             true
-        } else if octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31 {
-            true
-        } else {
-            false
-        };
+        } else { octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31 };
         !is_private
     }
 }
@@ -344,11 +340,7 @@ trait Ipv6CheckMethods {
 impl Ipv6CheckMethods for Ipv6Addr {
     fn is_global_x(&self) -> bool {
         let octets = self.octets();
-        let is_local = if octets[0] == 0b11111110 && octets[1] >> 6 == 0b00000010 {
-            true
-        } else {
-            false
-        };
+        let is_local = octets[0] == 0b11111110 && octets[1] >> 6 == 0b00000010;
         !is_local
     }
 }
@@ -374,14 +366,14 @@ pub struct Host {
 
 impl Host {
     pub fn new(addr: IpAddr, ports: Option<Vec<u16>>) -> Host {
-        let h = match ports {
+        
+        match ports {
             Some(p) => Host { addr, ports: p },
             None => Host {
                 addr,
                 ports: vec![],
             },
-        };
-        h
+        }
     }
 }
 

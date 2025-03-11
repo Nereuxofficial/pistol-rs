@@ -80,25 +80,16 @@ pub fn send_icmp_ping_packet(
     let layers_match = LayersMatch::Layer4MatchIcmp(layer4_icmp);
 
     let (ret, _rtt) = layer3_ipv4_send(src_ipv4, dst_ipv4, &ip_buff, vec![layers_match], timeout)?;
-    match Ipv4Packet::new(&ret) {
-        Some(ipv4_packet) => {
-            match ipv4_packet.get_next_level_protocol() {
-                IpNextHeaderProtocols::Icmp => {
-                    match IcmpPacket::new(ipv4_packet.payload()) {
-                        Some(icmp_packet) => {
-                            let icmp_type = icmp_packet.get_icmp_type();
-                            // let icmp_code = icmp_packet.get_icmp_code();
-                            if icmp_type == IcmpType(0) {
-                                return Ok(true);
-                            }
-                        }
-                        None => (),
-                    }
+    if let Some(ipv4_packet) = Ipv4Packet::new(&ret) {
+        if ipv4_packet.get_next_level_protocol() == IpNextHeaderProtocols::Icmp {
+            if let Some(icmp_packet) = IcmpPacket::new(ipv4_packet.payload()) {
+                let icmp_type = icmp_packet.get_icmp_type();
+                // let icmp_code = icmp_packet.get_icmp_code();
+                if icmp_type == IcmpType(0) {
+                    return Ok(true);
                 }
-                _ => (),
             }
         }
-        None => (),
     }
     Ok(false)
 }
