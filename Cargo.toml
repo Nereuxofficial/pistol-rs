@@ -33,3 +33,5 @@ zip = "^0"
 kdam = "^0"
 escape-bytes = "^0"
 rand = "0.9.0"
+socket2 = "0.5.8"
+tokio = { version = "1.44.1", features = ["full"] }
